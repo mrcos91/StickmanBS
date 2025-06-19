@@ -33,6 +33,7 @@
             image-rendering: pixelated; /* Mejor renderizado para pixeles */
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
+            position: relative; /* Necesario para el pseudoelemento ::before */
         }
         /* Opcional: Efecto de scanlines para un toque aún más retro */
         /*
@@ -178,7 +179,7 @@
 
         let player;
         let gravity = 0.8;
-        let jumpStrength = -12;
+        let jumpStrength = -14; // Aumentada la fuerza de salto
         let platforms = [];
         let asteroids = [];
         let score = 0;
@@ -187,7 +188,7 @@
 
         // Stickman animation variables
         let frame = 0;
-        let frameRate = 8; // Velocidad de la animación (más alto = más lento)
+        let frameRate = 6; // Velocidad de la animación (más bajo = más rápido)
         let frameCounter = 0;
         let isRunning = false;
         let isJumping = false; // Estado para la animación de salto
@@ -219,7 +220,8 @@
             for (let i = 1; i < 10; i++) {
                 // Aseguramos que haya espacio para saltar entre plataformas
                 let lastX = platforms[platforms.length - 1].x + platforms[platforms.length - 1].w;
-                platforms.push(createPlatform(lastX + 80 + (Math.random() * 120), 300 + (Math.random() * 60), 100, Math.random() < 0.2));
+                // Ajustado el rango para distancias más razonables
+                platforms.push(createPlatform(lastX + 60 + (Math.random() * 100), 300 + (Math.random() * 60), 100, Math.random() < 0.2));
             }
 
             const firstPlatform = platforms[0];
@@ -273,7 +275,7 @@
 
             // Arms (dynamic based on state)
             ctx.beginPath();
-            if (isJumping || !player.grounded) { // Si está saltando o cayendo
+            if (isJumping) { // Si está saltando o cayendo
                 // Brazos arriba y un poco hacia atrás al saltar
                 ctx.moveTo(bodyStartX, bodyStartY);
                 ctx.lineTo(bodyStartX - armLength * 0.8, bodyStartY - armLength * 0.5);
@@ -304,7 +306,7 @@
             // Legs (dynamic based on state)
             ctx.beginPath();
             const legStartY = bodyStartY + bodyLength;
-            if (isJumping || !player.grounded) { // Si está saltando o cayendo
+            if (isJumping) { // Si está saltando o cayendo
                 // Piernas ligeramente dobladas y juntas
                 ctx.moveTo(bodyStartX, legStartY);
                 ctx.lineTo(bodyStartX - legLength * 0.2, legStartY + legLength * 0.8);
@@ -388,17 +390,14 @@
                     player.x < p.x + p.w &&
                     player.x + player.w > p.x &&
                     player.y + player.h > p.y && // El fondo del jugador está por debajo de la parte superior de la plataforma
-                    player.y < p.y + p.h && // La parte superior del jugador está por encima de la parte inferior de la plataforma
+                    player.y + player.h - player.vy <= p.y && // El jugador estaba por encima de la plataforma en el frame anterior
                     player.vy >= 0 // Asegurarse de que el jugador está cayendo
                 ) {
-                    // Si el jugador estaba por encima de la plataforma en el frame anterior
-                    if (player.y + player.h - player.vy <= p.y) {
-                        player.y = p.y - player.h;
-                        player.vy = 0;
-                        player.grounded = true;
-                        player.jumps = 0; // Reset jumps when grounded
-                        if (p.trap) gameOver();
-                    }
+                    player.y = p.y - player.h;
+                    player.vy = 0;
+                    player.grounded = true;
+                    player.jumps = 0; // Reset jumps when grounded
+                    if (p.trap) gameOver();
                 }
             }
 
@@ -408,7 +407,7 @@
                 let lastX = platforms[platforms.length - 1].x;
                 // Generar nuevas plataformas con distancias variadas para desafío
                 platforms.push(
-                    createPlatform(lastX + 80 + (Math.random() * 120), 300 + (Math.random() * 60), 100, Math.random() < 0.2)
+                    createPlatform(lastX + 60 + (Math.random() * 100), 300 + (Math.random() * 60), 100, Math.random() < 0.2)
                 );
             }
 
