@@ -2,39 +2,67 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <title>Stickman Run</title>
+    <title>Stickman Run Retro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Press Start 2P', cursive; /* Fuente pixelada */
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: linear-gradient(to bottom, #87ceeb, #ffffff);
-            overflow: hidden; /* Evita barras de desplazamiento */
+            background: linear-gradient(to bottom, #4CAF50, #8BC34A); /* Verde más retro */
+            overflow: hidden;
+            color: #eee; /* Texto claro */
         }
         header {
             width: 100%;
-            padding: 10px;
-            background-color: #333;
-            color: white;
+            padding: 15px;
+            background-color: #333; /* Fondo oscuro para el encabezado */
+            color: #FFEB3B; /* Amarillo brillante para el título */
             text-align: center;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Sombra sutil */
         }
         canvas {
-            background: #d0f0ff;
-            border: 2px solid #333;
-            margin-top: 20px;
+            background: #A7D9A0; /* Fondo del juego más pastel/retro */
+            border: 6px solid #222; /* Borde más grueso y oscuro */
+            margin-top: 25px;
+            box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.5); /* Sombra más pronunciada para efecto retro */
+            image-rendering: pixelated; /* Mejor renderizado para pixeles */
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
         }
+        /* Opcional: Efecto de scanlines para un toque aún más retro */
+        /*
+        canvas::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.1) 0px,
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+        */
         #ui {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            color: #000;
-            font-size: 20px;
+            top: 20px;
+            left: 20px;
+            color: #FFEB3B; /* Amarillo retro */
+            font-size: 24px;
             font-weight: bold;
             z-index: 2;
+            text-shadow: 2px 2px #000; /* Sombra para el texto de UI */
         }
         .full-screen-overlay {
             position: absolute;
@@ -42,63 +70,89 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.85); /* Fondo más oscuro */
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
-            font-size: 28px;
+            color: #FFEB3B; /* Amarillo para el texto */
+            font-size: 32px;
             z-index: 3;
             text-align: center;
+            text-shadow: 3px 3px #000;
+        }
+        .full-screen-overlay h1 {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: #FF4081; /* Rosa vibrante */
+        }
+        .full-screen-overlay p {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            color: #B2FF59; /* Verde lima */
         }
         .full-screen-overlay button {
             margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 20px;
+            padding: 15px 30px;
+            font-size: 24px;
             cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
-            transition: background-color 0.3s ease;
+            border: 4px solid #FF4081; /* Borde rosa */
+            border-radius: 8px;
+            background-color: #00BCD4; /* Azul cian */
+            color: #FFF;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 5px 5px #000;
         }
         .full-screen-overlay button:hover {
-            background-color: #0056b3;
+            background-color: #0097A7;
+            transform: translateY(-2px);
+            box-shadow: 7px 7px #000;
+        }
+        .full-screen-overlay button:active {
+            transform: translateY(2px);
+            box-shadow: 3px 3px #000;
         }
         #musicToggle {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 20px;
+            right: 20px;
             z-index: 2;
-            padding: 8px 15px;
-            font-size: 16px;
+            padding: 10px 18px;
+            font-size: 18px;
             cursor: pointer;
-            border: none;
+            border: 3px solid #00E676; /* Borde verde */
             border-radius: 5px;
-            background-color: #28a745;
-            color: white;
-            transition: background-color 0.3s ease;
+            background-color: #76FF03; /* Verde lima vibrante */
+            color: #333;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 3px 3px #000;
+            font-family: 'Press Start 2P', cursive;
         }
         #musicToggle:hover {
-            background-color: #218838;
+            background-color: #64DD17;
+            transform: translateY(-1px);
+            box-shadow: 4px 4px #000;
+        }
+        #musicToggle:active {
+            transform: translateY(1px);
+            box-shadow: 2px 2px #000;
         }
     </style>
 </head>
 <body>
-    <header>Stickman Run</header>
+    <header>Stickman Run Retro</header>
     <div id="ui">Puntuación: <span id="score">0</span></div>
     <button id="musicToggle">🎵 Música (On)</button>
 
     <div id="startScreen" class="full-screen-overlay">
-        <h1>Stickman Run</h1>
-        <p>¡Prepárate para la aventura!</p>
-        <button id="startGameButton">Iniciar Juego</button>
+        <h1>STICKMAN RUN</h1>
+        <p>¡Corre y salta para sobrevivir!</p>
+        <button id="startGameButton">INICIAR JUEGO</button>
     </div>
 
     <div id="gameOverScreen" class="full-screen-overlay" style="display: none;">
         <div id="finalScore"></div>
-        <button id="restartGameButton">Volver a empezar</button>
+        <button id="restartGameButton">VOLVER A EMPEZAR</button>
     </div>
 
     <canvas id="game" width="800" height="400"></canvas>
@@ -133,10 +187,10 @@
 
         // Stickman animation variables
         let frame = 0;
-        let frameRate = 5; // Adjust for animation speed
+        let frameRate = 8; // Velocidad de la animación (más alto = más lento)
         let frameCounter = 0;
         let isRunning = false;
-        let isJumping = false;
+        let isJumping = false; // Estado para la animación de salto
 
         function createPlatform(x, y, w, trap = false) {
             return { x, y, w, h: 10, trap };
@@ -158,12 +212,14 @@
             gameRunning = true;
             gameOverScreen.style.display = "none";
             startScreen.style.display = "none"; // Ensure start screen is hidden
+            scoreDisplay.textContent = score; // Reset score display
 
             // Create initial platforms, ensuring the first one is at the start
             platforms.push(createPlatform(50, 300, 100, false)); // Fixed starting platform
             for (let i = 1; i < 10; i++) {
+                // Aseguramos que haya espacio para saltar entre plataformas
                 let lastX = platforms[platforms.length - 1].x + platforms[platforms.length - 1].w;
-                platforms.push(createPlatform(lastX + 100 + (Math.random() * 50), 300 + (Math.random() * 60), 100, Math.random() < 0.2));
+                platforms.push(createPlatform(lastX + 80 + (Math.random() * 120), 300 + (Math.random() * 60), 100, Math.random() < 0.2));
             }
 
             const firstPlatform = platforms[0];
@@ -200,8 +256,8 @@
             const bodyStartX = player.x + headRadius;
             const bodyStartY = player.y + headRadius * 2;
 
-            ctx.strokeStyle = "black";
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#1A1A1A"; // Color oscuro para el stickman
+            ctx.lineWidth = 3; // Un poco más grueso
             ctx.lineCap = "round";
 
             // Head
@@ -217,15 +273,15 @@
 
             // Arms (dynamic based on state)
             ctx.beginPath();
-            if (isJumping) {
-                // Arms up when jumping
+            if (isJumping || !player.grounded) { // Si está saltando o cayendo
+                // Brazos arriba y un poco hacia atrás al saltar
                 ctx.moveTo(bodyStartX, bodyStartY);
-                ctx.lineTo(bodyStartX - armLength, bodyStartY - armLength);
+                ctx.lineTo(bodyStartX - armLength * 0.8, bodyStartY - armLength * 0.5);
                 ctx.moveTo(bodyStartX, bodyStartY);
-                ctx.lineTo(bodyStartX + armLength, bodyStartY - armLength);
+                ctx.lineTo(bodyStartX + armLength * 0.8, bodyStartY - armLength * 0.5);
             } else if (isRunning) {
                 // Alternating arm swing when running
-                if (frame % 2 === 0) { // Arm forward, arm back
+                if (frame === 0) { // Arm forward, arm back
                     ctx.moveTo(bodyStartX, bodyStartY);
                     ctx.lineTo(bodyStartX - armLength * 0.8, bodyStartY + armLength * 0.5);
                     ctx.moveTo(bodyStartX, bodyStartY);
@@ -248,15 +304,15 @@
             // Legs (dynamic based on state)
             ctx.beginPath();
             const legStartY = bodyStartY + bodyLength;
-            if (isJumping) {
-                // Legs together when jumping
+            if (isJumping || !player.grounded) { // Si está saltando o cayendo
+                // Piernas ligeramente dobladas y juntas
                 ctx.moveTo(bodyStartX, legStartY);
-                ctx.lineTo(bodyStartX - legLength * 0.2, legStartY + legLength);
+                ctx.lineTo(bodyStartX - legLength * 0.2, legStartY + legLength * 0.8);
                 ctx.moveTo(bodyStartX, legStartY);
-                ctx.lineTo(bodyStartX + legLength * 0.2, legStartY + legLength);
+                ctx.lineTo(bodyStartX + legLength * 0.2, legStartY + legLength * 0.8);
             } else if (isRunning) {
                 // Alternating leg swing when running
-                if (frame % 2 === 0) { // One leg forward, one leg back
+                if (frame === 0) { // One leg forward, one leg back
                     ctx.moveTo(bodyStartX, legStartY);
                     ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength); // Leg back
                     ctx.moveTo(bodyStartX, legStartY);
@@ -279,22 +335,28 @@
         // --- End Stickman Drawing Function ---
 
         function drawPlatform(p) {
-            ctx.fillStyle = p.trap ? "#dc3545" : "#28a745"; // Red for traps, green for normal
+            ctx.fillStyle = p.trap ? "#FF4081" : "#8BC34A"; // Rosa para trampas, verde claro para normal
             ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(p.x, p.y, p.w, p.h);
         }
 
         function drawAsteroid(a) {
-            ctx.fillStyle = "#6c757d"; // Gray color
+            ctx.fillStyle = "#607D8B"; // Gris azulado para asteroides
             ctx.beginPath();
             ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
             ctx.fill();
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
 
         function gameOver() {
             dieSound.play();
             music.pause();
             gameRunning = false;
-            finalScore.textContent = `¡Has perdido! Puntuación: ${score}`;
+            finalScore.textContent = `¡HAS PERDIDO! PUNTUACIÓN: ${score}`;
             gameOverScreen.style.display = "flex";
             cancelAnimationFrame(animationFrameId); // Stop the animation loop
         }
@@ -307,31 +369,36 @@
             player.y += player.vy;
             player.grounded = false;
 
-            // Update stickman animation state
-            isJumping = !player.grounded; // If not grounded, must be jumping/falling
-            isRunning = player.grounded && player.vy === 0; // If grounded and not moving vertically
+            // Actualizar el estado de animación del stickman
+            isJumping = player.vy !== 0; // Si hay velocidad vertical, está saltando/cayendo
+            isRunning = player.grounded && player.vy === 0; // Si está en el suelo y sin velocidad vertical, está corriendo
 
             frameCounter++;
-            if (frameCounter % frameRate === 0) {
-                frame++;
-                if (frame > 1) frame = 0; // Simple two-frame animation
+            if (frameCounter >= frameRate) {
+                frame = 1 - frame; // Alternar entre 0 y 1
+                frameCounter = 0;
             }
+
 
             for (let p of platforms) {
                 p.x -= 2;
                 drawPlatform(p);
+                // Lógica de colisión mejorada para que no atraviese la plataforma
                 if (
-                    player.x + player.w > p.x &&
                     player.x < p.x + p.w &&
-                    player.y + player.h >= p.y &&
-                    player.y + player.h <= p.y + 10 &&
-                    player.vy >= 0
+                    player.x + player.w > p.x &&
+                    player.y + player.h > p.y && // El fondo del jugador está por debajo de la parte superior de la plataforma
+                    player.y < p.y + p.h && // La parte superior del jugador está por encima de la parte inferior de la plataforma
+                    player.vy >= 0 // Asegurarse de que el jugador está cayendo
                 ) {
-                    player.y = p.y - player.h;
-                    player.vy = 0;
-                    player.grounded = true;
-                    player.jumps = 0; // Reset jumps when grounded
-                    if (p.trap) gameOver();
+                    // Si el jugador estaba por encima de la plataforma en el frame anterior
+                    if (player.y + player.h - player.vy <= p.y) {
+                        player.y = p.y - player.h;
+                        player.vy = 0;
+                        player.grounded = true;
+                        player.jumps = 0; // Reset jumps when grounded
+                        if (p.trap) gameOver();
+                    }
                 }
             }
 
@@ -339,20 +406,20 @@
             if (platforms[0].x + platforms[0].w < 0) {
                 platforms.shift();
                 let lastX = platforms[platforms.length - 1].x;
-                // Ensure new platforms are placed at a reasonable distance
+                // Generar nuevas plataformas con distancias variadas para desafío
                 platforms.push(
-                    createPlatform(lastX + 100 + (Math.random() * 100), 300 + (Math.random() * 60), 100, Math.random() < 0.2)
+                    createPlatform(lastX + 80 + (Math.random() * 120), 300 + (Math.random() * 60), 100, Math.random() < 0.2)
                 );
             }
 
             // Check if player falls off the screen
-            if (player.y + player.h > canvas.height) {
+            if (player.y + player.h > canvas.height + 50) { // Añadimos un pequeño margen para que no sea instantáneo
                 gameOver();
                 return; // Stop further animation updates
             }
 
             // Asteroid generation and movement
-            if (Math.random() < 0.015 && score > 50) { // Reduced asteroid spawn rate, starts after some score
+            if (Math.random() < 0.01 && score > 50) { // Asteroids appear less frequently
                 asteroids.push(createAsteroid());
             }
             for (let i = asteroids.length - 1; i >= 0; i--) {
@@ -364,7 +431,7 @@
                 const dx = a.x - (player.x + player.w / 2);
                 const dy = a.y - (player.y + player.h / 2);
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < a.r + Math.max(player.w, player.h) / 2) {
+                if (distance < a.r + Math.max(player.w, player.h) / 2 - 5) { // Reducimos el radio de colisión ligeramente
                     gameOver();
                 }
 
