@@ -199,7 +199,7 @@
         let isRunning = false;
         let isJumping = false;
 
-        function createPlatform(x, y, w) { // Eliminado el parámetro 'trap'
+        function createPlatform(x, y, w) {
             return { x, y, w, h: 10, trap: false }; // Todas las plataformas son seguras
         }
 
@@ -224,10 +224,11 @@
             scoreDisplay.textContent = score;
 
             // Crear plataforma inicial fija
-            platforms.push(createPlatform(50, 300, 100)); // Ya no se pasa 'false'
+            platforms.push(createPlatform(50, 300, 100));
 
-            // Generar el resto de plataformas
-            for (let i = 1; i < 10; i++) {
+            // Generar el resto de plataformas después de la primera
+            // Aseguramos que 'platforms' ya tenga al menos un elemento antes de llamar a addPlatform
+            for (let i = 0; i < 9; i++) { // Se generan 9 plataformas adicionales para un total de 10
                 addPlatform();
             }
 
@@ -255,7 +256,7 @@
         }
 
         function addPlatform() {
-            const lastPlatform = platforms[platforms.length - 1];
+            const lastPlatform = platforms[platforms.length - 1]; // Ahora esto siempre será válido
             const minDistance = 80;
             const maxDistance = 150;
             let newX = lastPlatform.x + lastPlatform.w + minDistance + Math.random() * (maxDistance - minDistance);
@@ -265,7 +266,7 @@
             let newY = lastPlatform.y + minHeightDiff + Math.random() * (maxHeightDiff - minHeightDiff);
             newY = Math.max(250, Math.min(canvas.height - 50, newY));
 
-            platforms.push(createPlatform(newX, newY)); // Ya no se pasa la propiedad 'trap'
+            platforms.push(createPlatform(newX, newY));
         }
 
         // --- Stickman Drawing Function ---
@@ -351,7 +352,7 @@
         // --- End Stickman Drawing Function ---
 
         function drawPlatform(p) {
-            ctx.fillStyle = "#8BC34A"; // Todas las plataformas son verdes
+            ctx.fillStyle = "#8BC34A";
             ctx.fillRect(p.x, p.y, p.w, p.h);
             ctx.strokeStyle = "#333";
             ctx.lineWidth = 2;
@@ -414,7 +415,6 @@
                     player.vy = 0;
                     player.grounded = true;
                     player.jumps = 0;
-                    // Ya no hay trampas, así que no se llama a gameOver aquí
                 }
             }
 
