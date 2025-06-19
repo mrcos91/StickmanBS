@@ -179,7 +179,7 @@
 
         let player;
         let gravity = 0.8;
-        let jumpStrength = -14.5; // Ajuste para un salto más eficaz
+        let jumpStrength = -14.5;
         let platforms = [];
         let asteroids = [];
         let score = 0;
@@ -187,20 +187,20 @@
         let animationFrameId;
 
         // Variables de velocidad de juego y generación
-        let gameSpeed = 2; // Velocidad inicial del desplazamiento de plataformas
-        const maxGameSpeed = 4; // Velocidad máxima para el desafío
-        const speedIncreaseInterval = 500; // Cada cuántos puntos aumenta la velocidad
+        let gameSpeed = 2;
+        const maxGameSpeed = 4;
+        const speedIncreaseInterval = 500;
         let lastSpeedIncreaseScore = 0;
 
         // Stickman animation variables
         let frame = 0;
-        let frameRate = 6; // Velocidad de la animación (más bajo = más rápido)
+        let frameRate = 6;
         let frameCounter = 0;
         let isRunning = false;
         let isJumping = false;
 
-        function createPlatform(x, y, w, trap = false) {
-            return { x, y, w, h: 10, trap };
+        function createPlatform(x, y, w) { // Eliminado el parámetro 'trap'
+            return { x, y, w, h: 10, trap: false }; // Todas las plataformas son seguras
         }
 
         function createAsteroid() {
@@ -216,15 +216,15 @@
             platforms = [];
             asteroids = [];
             score = 0;
-            gameSpeed = 2; // Reiniciar velocidad del juego
-            lastSpeedIncreaseScore = 0; // Reiniciar contador de aumento de velocidad
+            gameSpeed = 2;
+            lastSpeedIncreaseScore = 0;
             gameRunning = true;
             gameOverScreen.style.display = "none";
-            startScreen.style.display = "none"; // Ensure start screen is hidden
-            scoreDisplay.textContent = score; // Reset score display
+            startScreen.style.display = "none";
+            scoreDisplay.textContent = score;
 
             // Crear plataforma inicial fija
-            platforms.push(createPlatform(50, 300, 100, false));
+            platforms.push(createPlatform(50, 300, 100)); // Ya no se pasa 'false'
 
             // Generar el resto de plataformas
             for (let i = 1; i < 10; i++) {
@@ -233,17 +233,16 @@
 
             const firstPlatform = platforms[0];
             player = {
-                x: firstPlatform.x + 10, // Posicionar jugador en la primera plataforma
-                y: firstPlatform.y - 40, // Ajustar Y para que esté sobre la plataforma
-                w: 20, // Ancho del stickman
-                h: 40, // Alto del stickman
+                x: firstPlatform.x + 10,
+                y: firstPlatform.y - 40,
+                w: 20,
+                h: 40,
                 vy: 0,
                 grounded: false,
-                jumps: 0, // Saltos actuales
-                maxJumps: 2 // Saltos máximos permitidos
+                jumps: 0,
+                maxJumps: 2
             };
 
-            // Iniciar música solo cuando el juego comience
             if (music.paused) {
                 music.play().catch(e => console.log("Music play failed:", e));
                 musicToggle.textContent = "🎵 Música (On)";
@@ -257,21 +256,16 @@
 
         function addPlatform() {
             const lastPlatform = platforms[platforms.length - 1];
-            // Calcular la siguiente posición X para la plataforma
-            // Asegura que la distancia sea saltables con doble salto
-            const minDistance = 80; // Distancia mínima para que sea un desafío
-            const maxDistance = 150; // Distancia máxima para que sea alcanzable
+            const minDistance = 80;
+            const maxDistance = 150;
             let newX = lastPlatform.x + lastPlatform.w + minDistance + Math.random() * (maxDistance - minDistance);
 
-            // Ajustar la altura para que las plataformas sean accesibles
-            // La altura puede variar, pero no demasiado para no crear saltos imposibles
-            const minHeightDiff = -30; // Plataformas más bajas que la anterior
-            const maxHeightDiff = 30; // Plataformas más altas que la anterior
+            const minHeightDiff = -30;
+            const maxHeightDiff = 30;
             let newY = lastPlatform.y + minHeightDiff + Math.random() * (maxHeightDiff - minHeightDiff);
-            // Asegurarse de que la plataforma no se salga de los límites verticales
-            newY = Math.max(250, Math.min(canvas.height - 50, newY)); // Limita Y entre 250 y altura-50
+            newY = Math.max(250, Math.min(canvas.height - 50, newY));
 
-            platforms.push(createPlatform(newX, newY, 100, Math.random() < 0.2)); // 20% de probabilidad de ser trampa
+            platforms.push(createPlatform(newX, newY)); // Ya no se pasa la propiedad 'trap'
         }
 
         // --- Stickman Drawing Function ---
@@ -284,8 +278,8 @@
             const bodyStartX = player.x + headRadius;
             const bodyStartY = player.y + headRadius * 2;
 
-            ctx.strokeStyle = "#1A1A1A"; // Color oscuro para el stickman
-            ctx.lineWidth = 3; // Un poco más grueso
+            ctx.strokeStyle = "#1A1A1A";
+            ctx.lineWidth = 3;
             ctx.lineCap = "round";
 
             // Head
@@ -302,26 +296,23 @@
             // Arms (dynamic based on state)
             ctx.beginPath();
             if (isJumping) {
-                // Brazos arriba y un poco hacia atrás al saltar
                 ctx.moveTo(bodyStartX, bodyStartY);
                 ctx.lineTo(bodyStartX - armLength * 0.8, bodyStartY - armLength * 0.5);
                 ctx.moveTo(bodyStartX, bodyStartY);
                 ctx.lineTo(bodyStartX + armLength * 0.8, bodyStartY - armLength * 0.5);
             } else if (isRunning) {
-                // Alternating arm swing when running
-                if (frame === 0) { // Arm forward, arm back
+                if (frame === 0) {
                     ctx.moveTo(bodyStartX, bodyStartY);
-                    ctx.lineTo(bodyStartX - armLength * 0.8, bodyStartY + armLength * 0.5); // Brazo trasero
+                    ctx.lineTo(bodyStartX - armLength * 0.8, bodyStartY + armLength * 0.5);
                     ctx.moveTo(bodyStartX, bodyStartY);
-                    ctx.lineTo(bodyStartX + armLength, bodyStartY); // Brazo delantero
-                } else { // Other arm forward
+                    ctx.lineTo(bodyStartX + armLength, bodyStartY);
+                } else {
                     ctx.moveTo(bodyStartX, bodyStartY);
-                    ctx.lineTo(bodyStartX + armLength * 0.8, bodyStartY + armLength * 0.5); // Brazo trasero
+                    ctx.lineTo(bodyStartX + armLength * 0.8, bodyStartY + armLength * 0.5);
                     ctx.moveTo(bodyStartX, bodyStartY);
-                    ctx.lineTo(bodyStartX - armLength, bodyStartY); // Brazo delantero
+                    ctx.lineTo(bodyStartX - armLength, bodyStartY);
                 }
             } else {
-                // Arms at rest
                 ctx.moveTo(bodyStartX, bodyStartY);
                 ctx.lineTo(bodyStartX - armLength, bodyStartY + armLength / 2);
                 ctx.moveTo(bodyStartX, bodyStartY);
@@ -333,26 +324,23 @@
             ctx.beginPath();
             const legStartY = bodyStartY + bodyLength;
             if (isJumping) {
-                // Piernas ligeramente dobladas y juntas
                 ctx.moveTo(bodyStartX, legStartY);
                 ctx.lineTo(bodyStartX - legLength * 0.2, legStartY + legLength * 0.8);
                 ctx.moveTo(bodyStartX, legStartY);
                 ctx.lineTo(bodyStartX + legLength * 0.2, legStartY + legLength * 0.8);
             } else if (isRunning) {
-                // Alternating leg swing when running
-                if (frame === 0) { // One leg forward, one leg back
+                if (frame === 0) {
                     ctx.moveTo(bodyStartX, legStartY);
-                    ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength); // Pierna trasera
+                    ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength);
                     ctx.moveTo(bodyStartX, legStartY);
-                    ctx.lineTo(bodyStartX + legLength * 0.5, legStartY + legLength * 0.8); // Pierna delantera (ligeramente doblada)
-                } else { // Other leg forward
+                    ctx.lineTo(bodyStartX + legLength * 0.5, legStartY + legLength * 0.8);
+                } else {
                     ctx.moveTo(bodyStartX, legStartY);
-                    ctx.lineTo(bodyStartX + legLength * 0.5, legStartY + legLength); // Pierna trasera
+                    ctx.lineTo(bodyStartX + legLength * 0.5, legStartY + legLength);
                     ctx.moveTo(bodyStartX, legStartY);
-                    ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength * 0.8); // Pierna delantera (ligeramente doblada)
+                    ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength * 0.8);
                 }
             } else {
-                // Legs at rest
                 ctx.moveTo(bodyStartX, legStartY);
                 ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength);
                 ctx.moveTo(bodyStartX, legStartY);
@@ -363,7 +351,7 @@
         // --- End Stickman Drawing Function ---
 
         function drawPlatform(p) {
-            ctx.fillStyle = p.trap ? "#FF4081" : "#8BC34A"; // Rosa para trampas, verde claro para normal
+            ctx.fillStyle = "#8BC34A"; // Todas las plataformas son verdes
             ctx.fillRect(p.x, p.y, p.w, p.h);
             ctx.strokeStyle = "#333";
             ctx.lineWidth = 2;
@@ -371,7 +359,7 @@
         }
 
         function drawAsteroid(a) {
-            ctx.fillStyle = "#607D8B"; // Gris azulado para asteroides
+            ctx.fillStyle = "#607D8B";
             ctx.beginPath();
             ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
             ctx.fill();
@@ -386,7 +374,7 @@
             gameRunning = false;
             finalScore.textContent = `¡HAS PERDIDO! PUNTUACIÓN: ${score}`;
             gameOverScreen.style.display = "flex";
-            cancelAnimationFrame(animationFrameId); // Stop the animation loop
+            cancelAnimationFrame(animationFrameId);
         }
 
         function animate() {
@@ -397,67 +385,58 @@
             player.y += player.vy;
             player.grounded = false;
 
-            // Actualizar el estado de animación del stickman
-            isJumping = player.vy !== 0; // Si hay velocidad vertical, está saltando/cayendo
-            // isRunning solo si está en el suelo Y sin velocidad vertical (no saltando/cayendo)
+            isJumping = player.vy !== 0;
             isRunning = player.grounded && player.vy === 0;
 
             frameCounter++;
             if (frameCounter >= frameRate) {
-                frame = 1 - frame; // Alternar entre 0 y 1
+                frame = 1 - frame;
                 frameCounter = 0;
             }
 
-            // Aumentar la velocidad del juego gradualmente
             if (score > lastSpeedIncreaseScore + speedIncreaseInterval && gameSpeed < maxGameSpeed) {
-                gameSpeed += 0.1; // Aumenta la velocidad en un pequeño incremento
+                gameSpeed += 0.1;
                 lastSpeedIncreaseScore = score;
             }
 
             for (let p of platforms) {
-                p.x -= gameSpeed; // Las plataformas se mueven más rápido con gameSpeed
+                p.x -= gameSpeed;
                 drawPlatform(p);
-                // Lógica de colisión mejorada para que no atraviese la plataforma
+
                 if (
                     player.x < p.x + p.w &&
                     player.x + player.w > p.x &&
                     player.y + player.h > p.y &&
-                    // Verifica que el jugador estaba por encima de la plataforma en el frame anterior
                     player.y + player.h - player.vy <= p.y &&
-                    player.vy >= 0 // Asegurarse de que el jugador está cayendo
+                    player.vy >= 0
                 ) {
                     player.y = p.y - player.h;
                     player.vy = 0;
                     player.grounded = true;
-                    player.jumps = 0; // Reiniciar saltos al estar en el suelo
-                    if (p.trap) gameOver();
+                    player.jumps = 0;
+                    // Ya no hay trampas, así que no se llama a gameOver aquí
                 }
             }
 
-            // Eliminar plataformas fuera de pantalla y añadir nuevas
             if (platforms[0].x + platforms[0].w < 0) {
                 platforms.shift();
-                addPlatform(); // Añadir una nueva plataforma
+                addPlatform();
             }
 
-            // Comprobar si el jugador cae fuera de la pantalla
             if (player.y + player.h > canvas.height + 50) {
                 gameOver();
                 return;
             }
 
-            // Generación y movimiento de asteroides
             if (Math.random() < 0.01 && score > 50) {
                 asteroids.push(createAsteroid());
             }
             for (let i = asteroids.length - 1; i >= 0; i--) {
                 let a = asteroids[i];
                 a.y += a.speed;
-                // Los asteroides también se mueven horizontalmente con el juego
-                a.x -= gameSpeed * 0.5; // Los asteroides pueden moverse un poco más lento que las plataformas
+                a.x -= gameSpeed * 0.5;
                 drawAsteroid(a);
 
-                // Colisión del asteroide con el jugador (círculo-rectángulo simple)
                 const dx = a.x - (player.x + player.w / 2);
                 const dy = a.y - (player.y + player.h / 2);
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -465,10 +444,10 @@
                     gameOver();
                 }
 
-                if (a.y > canvas.height || a.x + a.r < 0) asteroids.splice(i, 1); // Eliminar si sale por abajo o izquierda
+                if (a.y > canvas.height || a.x + a.r < 0) asteroids.splice(i, 1);
             }
 
-            drawStickMan(); // Dibujar el stickman
+            drawStickMan();
             score++;
             scoreDisplay.textContent = score;
 
@@ -479,13 +458,12 @@
             if (e.key === "ArrowUp" && gameRunning) {
                 if (player.grounded || player.jumps < player.maxJumps) {
                     player.vy = jumpStrength;
-                    player.grounded = false; // El jugador ya no está en el suelo al saltar
+                    player.grounded = false;
                     player.jumps++;
                 }
             }
         });
 
-        // Event listeners for UI buttons
         musicToggle.addEventListener("click", () => {
             if (music.paused) {
                 music.play().catch(e => console.log("Music play failed:", e));
@@ -499,7 +477,6 @@
         startGameButton.addEventListener("click", resetGame);
         restartGameButton.addEventListener("click", resetGame);
 
-        // Initially show the start screen
         startScreen.style.display = "flex";
     </script>
 </body>
