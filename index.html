@@ -1,238 +1,399 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Stickman Run</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: linear-gradient(to bottom, #87ceeb, #ffffff);
-    }
-    header {
-      width: 100%;
-      padding: 10px;
-      background-color: #333;
-      color: white;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-    }
-    canvas {
-      background: #d0f0ff;
-      border: 2px solid #333;
-      margin-top: 20px;
-    }
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: #000;
-      font-size: 20px;
-      font-weight: bold;
-      z-index: 2;
-    }
-    #gameOverScreen {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-size: 28px;
-      z-index: 3;
-    }
-    #gameOverScreen button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 20px;
-      cursor: pointer;
-    }
-    #musicToggle {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 2;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <title>Stickman Run</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(to bottom, #87ceeb, #ffffff);
+            overflow: hidden; /* Evita barras de desplazamiento */
+        }
+        header {
+            width: 100%;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        canvas {
+            background: #d0f0ff;
+            border: 2px solid #333;
+            margin-top: 20px;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #000;
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 2;
+        }
+        .full-screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 28px;
+            z-index: 3;
+            text-align: center;
+        }
+        .full-screen-overlay button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .full-screen-overlay button:hover {
+            background-color: #0056b3;
+        }
+        #musicToggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 2;
+            padding: 8px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #28a745;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        #musicToggle:hover {
+            background-color: #218838;
+        }
+    </style>
 </head>
 <body>
-  <header>Stickman Run</header>
-  <div id="ui">Puntuación: <span id="score">0</span></div>
-  <button id="musicToggle">🎵 Música (On)</button>
-  <div id="gameOverScreen">
-    <div id="finalScore"></div>
-    <button onclick="location.reload()">Volver a empezar</button>
-  </div>
-  <canvas id="game" width="800" height="400"></canvas>
-  <audio id="bgMusic" loop>
-    <source src="https://cdn.pixabay.com/audio/2022/10/31/audio_a6c2048e30.mp3" type="audio/mpeg" />
-  </audio>
-  <audio id="dieSound">
-    <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_664f82b217.mp3" type="audio/mpeg" />
-  </audio>
-  <script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-    const scoreDisplay = document.getElementById("score");
-    const gameOverScreen = document.getElementById("gameOverScreen");
-    const finalScore = document.getElementById("finalScore");
-    const music = document.getElementById("bgMusic");
-    const dieSound = document.getElementById("dieSound");
-    const musicToggle = document.getElementById("musicToggle");
+    <header>Stickman Run</header>
+    <div id="ui">Puntuación: <span id="score">0</span></div>
+    <button id="musicToggle">🎵 Música (On)</button>
 
-    let player;
-    let gravity = 0.8;
-    let jumpStrength = -12;
-    let platforms = [];
-    let asteroids = [];
-    let score = 0;
-    let gameRunning = true;
+    <div id="startScreen" class="full-screen-overlay">
+        <h1>Stickman Run</h1>
+        <p>¡Prepárate para la aventura!</p>
+        <button id="startGameButton">Iniciar Juego</button>
+    </div>
 
-    function createPlatform(x, y, w, trap = false) {
-      return { x, y, w, h: 10, trap };
-    }
+    <div id="gameOverScreen" class="full-screen-overlay" style="display: none;">
+        <div id="finalScore"></div>
+        <button id="restartGameButton">Volver a empezar</button>
+    </div>
 
-    function createAsteroid() {
-      return {
-        x: Math.random() * canvas.width,
-        y: -20,
-        r: 10 + Math.random() * 10,
-        speed: 4 + Math.random() * 3
-      };
-    }
+    <canvas id="game" width="800" height="400"></canvas>
+    <audio id="bgMusic" loop>
+        <source src="https://cdn.pixabay.com/audio/2022/10/31/audio_a6c2048e30.mp3" type="audio/mpeg" />
+    </audio>
+    <audio id="dieSound">
+        <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_664f82b217.mp3" type="audio/mpeg" />
+    </audio>
 
-    function resetGame() {
-      platforms = [];
-      asteroids = [];
-      score = 0;
-      gameRunning = true;
-      gameOverScreen.style.display = "none";
+    <script>
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const scoreDisplay = document.getElementById("score");
+        const startScreen = document.getElementById("startScreen");
+        const startGameButton = document.getElementById("startGameButton");
+        const gameOverScreen = document.getElementById("gameOverScreen");
+        const finalScore = document.getElementById("finalScore");
+        const restartGameButton = document.getElementById("restartGameButton");
+        const music = document.getElementById("bgMusic");
+        const dieSound = document.getElementById("dieSound");
+        const musicToggle = document.getElementById("musicToggle");
 
-      for (let i = 0; i < 10; i++) {
-        platforms.push(createPlatform(200 * i, 300 + (Math.random() * 60), 100, Math.random() < 0.2));
-      }
+        let player;
+        let gravity = 0.8;
+        let jumpStrength = -12;
+        let platforms = [];
+        let asteroids = [];
+        let score = 0;
+        let gameRunning = false;
+        let animationFrameId;
 
-      const firstPlatform = platforms[0];
-      player = {
-        x: firstPlatform.x + 10,
-        y: firstPlatform.y - 30,
-        w: 30,
-        h: 30,
-        vy: 0,
-        grounded: false
-      };
+        // Stickman animation variables
+        let frame = 0;
+        let frameRate = 5; // Adjust for animation speed
+        let frameCounter = 0;
+        let isRunning = false;
+        let isJumping = false;
 
-      animate();
-    }
-
-    function drawPlayer() {
-      ctx.fillStyle = "black";
-      ctx.fillRect(player.x, player.y, player.w, player.h);
-    }
-
-    function drawPlatform(p) {
-      ctx.fillStyle = p.trap ? "red" : "green";
-      ctx.fillRect(p.x, p.y, p.w, p.h);
-    }
-
-    function drawAsteroid(a) {
-      ctx.fillStyle = "gray";
-      ctx.beginPath();
-      ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    function gameOver() {
-      dieSound.play();
-      music.pause();
-      gameRunning = false;
-      finalScore.textContent = `¡Has perdido! Puntuación: ${score}`;
-      gameOverScreen.style.display = "flex";
-    }
-
-    function animate() {
-      if (!gameRunning) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      player.vy += gravity;
-      player.y += player.vy;
-      player.grounded = false;
-
-      for (let p of platforms) {
-        p.x -= 2;
-        drawPlatform(p);
-        if (
-          player.x + player.w > p.x &&
-          player.x < p.x + p.w &&
-          player.y + player.h >= p.y &&
-          player.y + player.h <= p.y + 10 &&
-          player.vy >= 0
-        ) {
-          player.y = p.y - player.h;
-          player.vy = 0;
-          player.grounded = true;
-          if (p.trap) gameOver();
+        function createPlatform(x, y, w, trap = false) {
+            return { x, y, w, h: 10, trap };
         }
-      }
 
-      if (platforms[0].x + platforms[0].w < 0) {
-        platforms.shift();
-        let lastX = platforms[platforms.length - 1].x;
-        platforms.push(
-          createPlatform(lastX + 200, 300 + (Math.random() * 60), 100, Math.random() < 0.2)
-        );
-      }
-
-      if (Math.random() < 0.02 && score > 10) asteroids.push(createAsteroid());
-      for (let i = asteroids.length - 1; i >= 0; i--) {
-        let a = asteroids[i];
-        a.y += a.speed;
-        drawAsteroid(a);
-        if (
-          a.x > player.x &&
-          a.x < player.x + player.w &&
-          a.y + a.r > player.y &&
-          a.y - a.r < player.y + player.h
-        ) {
-          gameOver();
+        function createAsteroid() {
+            return {
+                x: Math.random() * canvas.width,
+                y: -20,
+                r: 10 + Math.random() * 10,
+                speed: 4 + Math.random() * 3
+            };
         }
-        if (a.y > canvas.height) asteroids.splice(i, 1);
-      }
 
-      drawPlayer();
-      score++;
-      scoreDisplay.textContent = score;
+        function resetGame() {
+            platforms = [];
+            asteroids = [];
+            score = 0;
+            gameRunning = true;
+            gameOverScreen.style.display = "none";
+            startScreen.style.display = "none"; // Ensure start screen is hidden
 
-      requestAnimationFrame(animate);
-    }
+            for (let i = 0; i < 10; i++) {
+                platforms.push(createPlatform(200 * i, 300 + (Math.random() * 60), 100, Math.random() < 0.2));
+            }
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowUp" && player.grounded) {
-        player.vy = jumpStrength;
-      }
-    });
+            const firstPlatform = platforms[0];
+            player = {
+                x: firstPlatform.x + 10,
+                y: firstPlatform.y - 30,
+                w: 20, // Ancho del stickman
+                h: 40, // Alto del stickman
+                vy: 0,
+                grounded: false,
+                jumps: 0, // Current jumps
+                maxJumps: 2 // Max jumps allowed
+            };
 
-    musicToggle.addEventListener("click", () => {
-      if (music.paused) {
-        music.play();
-        musicToggle.textContent = "🎵 Música (On)";
-      } else {
-        music.pause();
-        musicToggle.textContent = "🎵 Música (Off)";
-      }
-    });
+            // Start music only when game starts
+            if (music.paused) {
+                music.play().catch(e => console.log("Music play failed:", e)); // Handle potential autoplay policy
+                musicToggle.textContent = "🎵 Música (On)";
+            }
 
-    music.play();
-    resetGame();
-  </script>
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            animate();
+        }
+
+        // --- Stickman Drawing Function ---
+        function drawStickMan() {
+            const headRadius = player.w / 2;
+            const bodyLength = player.h * 0.5;
+            const armLength = player.h * 0.3;
+            const legLength = player.h * 0.4;
+
+            const bodyStartX = player.x + headRadius;
+            const bodyStartY = player.y + headRadius * 2;
+
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            ctx.lineCap = "round";
+
+            // Head
+            ctx.beginPath();
+            ctx.arc(bodyStartX, player.y + headRadius, headRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Body
+            ctx.beginPath();
+            ctx.moveTo(bodyStartX, player.y + headRadius * 2);
+            ctx.lineTo(bodyStartX, bodyStartY + bodyLength);
+            ctx.stroke();
+
+            // Arms (dynamic based on state)
+            ctx.beginPath();
+            if (isJumping) {
+                // Arms up when jumping
+                ctx.moveTo(bodyStartX, bodyStartY);
+                ctx.lineTo(bodyStartX - armLength, bodyStartY - armLength);
+                ctx.moveTo(bodyStartX, bodyStartY);
+                ctx.lineTo(bodyStartX + armLength, bodyStartY - armLength);
+            } else if (isRunning) {
+                // Alternating arm swing when running
+                if (frame % 2 === 0) { // Arm forward, arm back
+                    ctx.moveTo(bodyStartX, bodyStartY);
+                    ctx.lineTo(bodyStartX - armLength * 0.8, bodyStartY + armLength * 0.5);
+                    ctx.moveTo(bodyStartX, bodyStartY);
+                    ctx.lineTo(bodyStartX + armLength, bodyStartY);
+                } else { // Other arm forward
+                    ctx.moveTo(bodyStartX, bodyStartY);
+                    ctx.lineTo(bodyStartX + armLength * 0.8, bodyStartY + armLength * 0.5);
+                    ctx.moveTo(bodyStartX, bodyStartY);
+                    ctx.lineTo(bodyStartX - armLength, bodyStartY);
+                }
+            } else {
+                // Arms at rest
+                ctx.moveTo(bodyStartX, bodyStartY);
+                ctx.lineTo(bodyStartX - armLength, bodyStartY + armLength / 2);
+                ctx.moveTo(bodyStartX, bodyStartY);
+                ctx.lineTo(bodyStartX + armLength, bodyStartY + armLength / 2);
+            }
+            ctx.stroke();
+
+            // Legs (dynamic based on state)
+            ctx.beginPath();
+            const legStartY = bodyStartY + bodyLength;
+            if (isJumping) {
+                // Legs together when jumping
+                ctx.moveTo(bodyStartX, legStartY);
+                ctx.lineTo(bodyStartX - legLength * 0.2, legStartY + legLength);
+                ctx.moveTo(bodyStartX, legStartY);
+                ctx.lineTo(bodyStartX + legLength * 0.2, legStartY + legLength);
+            } else if (isRunning) {
+                // Alternating leg swing when running
+                if (frame % 2 === 0) { // One leg forward, one leg back
+                    ctx.moveTo(bodyStartX, legStartY);
+                    ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength); // Leg back
+                    ctx.moveTo(bodyStartX, legStartY);
+                    ctx.lineTo(bodyStartX + legLength * 0.5, legStartY + legLength * 0.8); // Leg forward (bent slightly)
+                } else { // Other leg forward
+                    ctx.moveTo(bodyStartX, legStartY);
+                    ctx.lineTo(bodyStartX + legLength * 0.5, legStartY + legLength); // Leg back
+                    ctx.moveTo(bodyStartX, legStartY);
+                    ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength * 0.8); // Leg forward (bent slightly)
+                }
+            } else {
+                // Legs at rest
+                ctx.moveTo(bodyStartX, legStartY);
+                ctx.lineTo(bodyStartX - legLength * 0.5, legStartY + legLength);
+                ctx.moveTo(bodyStartX, legStartY);
+                ctx.lineTo(bodyStartX + legLength * 0.5, legStartY + legLength);
+            }
+            ctx.stroke();
+        }
+        // --- End Stickman Drawing Function ---
+
+        function drawPlatform(p) {
+            ctx.fillStyle = p.trap ? "#dc3545" : "#28a745"; // Red for traps, green for normal
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+        }
+
+        function drawAsteroid(a) {
+            ctx.fillStyle = "#6c757d"; // Gray color
+            ctx.beginPath();
+            ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function gameOver() {
+            dieSound.play();
+            music.pause();
+            gameRunning = false;
+            finalScore.textContent = `¡Has perdido! Puntuación: ${score}`;
+            gameOverScreen.style.display = "flex";
+            cancelAnimationFrame(animationFrameId); // Stop the animation loop
+        }
+
+        function animate() {
+            if (!gameRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            player.vy += gravity;
+            player.y += player.vy;
+            player.grounded = false;
+
+            // Update stickman animation state
+            isJumping = !player.grounded; // If not grounded, must be jumping/falling
+            isRunning = player.grounded && player.vy === 0; // If grounded and not moving vertically
+
+            frameCounter++;
+            if (frameCounter % frameRate === 0) {
+                frame++;
+                if (frame > 1) frame = 0; // Simple two-frame animation
+            }
+
+            for (let p of platforms) {
+                p.x -= 2;
+                drawPlatform(p);
+                if (
+                    player.x + player.w > p.x &&
+                    player.x < p.x + p.w &&
+                    player.y + player.h >= p.y &&
+                    player.y + player.h <= p.y + 10 &&
+                    player.vy >= 0
+                ) {
+                    player.y = p.y - player.h;
+                    player.vy = 0;
+                    player.grounded = true;
+                    player.jumps = 0; // Reset jumps when grounded
+                    if (p.trap) gameOver();
+                }
+            }
+
+            // Remove off-screen platforms and add new ones
+            if (platforms[0].x + platforms[0].w < 0) {
+                platforms.shift();
+                let lastX = platforms[platforms.length - 1].x;
+                platforms.push(
+                    createPlatform(lastX + 200, 300 + (Math.random() * 60), 100, Math.random() < 0.2)
+                );
+            }
+
+            // Asteroid generation and movement
+            if (Math.random() < 0.015 && score > 50) { // Reduced asteroid spawn rate, starts after some score
+                asteroids.push(createAsteroid());
+            }
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                let a = asteroids[i];
+                a.y += a.speed;
+                drawAsteroid(a);
+
+                // Check for collision with player (simple circle-rectangle collision)
+                const dx = a.x - (player.x + player.w / 2);
+                const dy = a.y - (player.y + player.h / 2);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < a.r + Math.max(player.w, player.h) / 2) {
+                    gameOver();
+                }
+
+                if (a.y > canvas.height) asteroids.splice(i, 1);
+            }
+
+            drawStickMan(); // Draw the stickman
+            score++;
+            scoreDisplay.textContent = score;
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp" && gameRunning) {
+                if (player.grounded || player.jumps < player.maxJumps) {
+                    player.vy = jumpStrength;
+                    player.grounded = false; // Player is no longer grounded when jumping
+                    player.jumps++;
+                }
+            }
+        });
+
+        // Event listeners for UI buttons
+        musicToggle.addEventListener("click", () => {
+            if (music.paused) {
+                music.play().catch(e => console.log("Music play failed:", e));
+                musicToggle.textContent = "🎵 Música (On)";
+            } else {
+                music.pause();
+                musicToggle.textContent = "🎵 Música (Off)";
+            }
+        });
+
+        startGameButton.addEventListener("click", resetGame);
+        restartGameButton.addEventListener("click", resetGame);
+
+        // Initially show the start screen
+        startScreen.style.display = "flex";
+    </script>
 </body>
 </html>
