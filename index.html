@@ -176,7 +176,7 @@
 <body>
     <header>Stickman Run Retro</header>
     <div id="ui">Puntuación: <span id="score">0</span></div>
-    <button id="musicToggle">🎵 Música (Off)</button>
+    <button id="musicToggle">🎵 Música (On)</button>
 
     <div id="startScreen" class="full-screen-overlay">
         <h1>STICKMAN RUN</h1>
@@ -199,10 +199,10 @@
     </div>
 
     <audio id="bgMusic" loop>
-        <source src="https://cdn.pixabay.com/download/audio/2024/08/28/audio_f7b02c8be7.mp3?filename=retro-game-arcade-236133.mp3" type="audio/mpeg" />
+        <source src="https://cdn.pixabay.com/audio/2022/10/31/audio_a6c2048e30.mp3" type="audio/mpeg" />
     </audio>
     <audio id="dieSound">
-        <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_3f6286949a.mp3?filename=grunt2-85989.mp3" type="audio/mpeg" />
+        <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_664f82b217.mp3" type="audio/mpeg" />
     </audio>
 
     <script type="module">
@@ -224,7 +224,6 @@
 
         let player;
         let gravity = 0.8;
-        // --- CAMBIO: Salto reducido ---
         let jumpStrength = -12.5; 
         let platforms = [];
         let asteroids = [];
@@ -234,7 +233,7 @@
         let animationFrameId;
 
         let gameSpeed = 3;
-        const maxGameSpeed = 7; // Aumentamos un poco la velocidad máxima
+        const maxGameSpeed = 7;
         
         let keys = {
             ArrowUp: false,
@@ -244,7 +243,6 @@
         };
 
         let frameCounter = 0;
-        // --- NUEVO: Variable para controlar la inicialización del audio ---
         let audioInitialized = false;
 
         async function saveScore(name, score) {
@@ -343,7 +341,7 @@
                 cancelAnimationFrame(animationFrameId);
             }
             
-            // Reanudar música si estaba activa
+            // La lógica existente ya se encarga de reproducir la música si el botón dice "On"
             if (musicToggle.textContent.includes("On")) {
                 music.currentTime = 0;
                 music.play();
@@ -493,7 +491,7 @@
             
             gameRunning = false;
             music.pause();
-            dieSound.play(); // El sonido de muerte se reproduce aquí
+            dieSound.play();
             cancelAnimationFrame(animationFrameId);
 
             const playerName = prompt(`¡HAS PERDIDO!\nPUNTUACIÓN: ${score}\n\nIngresa tu nombre para el ranking (3-10 caracteres):`);
@@ -517,7 +515,6 @@
             
             frameCounter++;
 
-            // --- CAMBIO: Aumento de velocidad progresivo y suave ---
             gameSpeed = Math.min(maxGameSpeed, 3 + score / 1500);
 
             player.vx = 0;
@@ -623,9 +620,8 @@
             }
         });
 
-        // --- CAMBIO: Manejo de audio simplificado ---
         musicToggle.addEventListener("click", () => {
-            if (!audioInitialized) return; // No hacer nada si el audio no está listo
+            if (!audioInitialized) return;
             if (music.paused) {
                 music.play();
                 musicToggle.textContent = "🎵 Música (On)";
@@ -637,8 +633,6 @@
 
         function initializeAudio() {
             if (audioInitialized) return;
-            // Intenta reproducir y pausar ambos sonidos para "desbloquearlos"
-            // en el navegador. Esto debe ocurrir después de un clic del usuario.
             music.play().then(() => {
                 music.pause();
                 music.currentTime = 0;
