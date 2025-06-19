@@ -8,14 +8,23 @@
       margin: 0;
       font-family: Arial, sans-serif;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      height: 100vh;
       background: linear-gradient(to bottom, #87ceeb, #ffffff);
+    }
+    header {
+      width: 100%;
+      padding: 10px;
+      background-color: #333;
+      color: white;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
     }
     canvas {
       background: #d0f0ff;
       border: 2px solid #333;
+      margin-top: 20px;
     }
     #ui {
       position: absolute;
@@ -56,6 +65,7 @@
   </style>
 </head>
 <body>
+  <header>Stickman Run</header>
   <div id="ui">Puntuación: <span id="score">0</span></div>
   <button id="musicToggle">🎵 Música (On)</button>
   <div id="gameOverScreen">
@@ -63,7 +73,7 @@
     <button onclick="location.reload()">Volver a empezar</button>
   </div>
   <canvas id="game" width="800" height="400"></canvas>
-  <audio id="bgMusic" loop autoplay>
+  <audio id="bgMusic" loop>
     <source src="https://cdn.pixabay.com/audio/2022/10/31/audio_a6c2048e30.mp3" type="audio/mpeg" />
   </audio>
   <audio id="dieSound">
@@ -79,7 +89,7 @@
     const dieSound = document.getElementById("dieSound");
     const musicToggle = document.getElementById("musicToggle");
 
-    let player = { x: 100, y: 300, w: 30, h: 30, vy: 0, grounded: false };
+    let player;
     let gravity = 0.8;
     let jumpStrength = -12;
     let platforms = [];
@@ -101,15 +111,26 @@
     }
 
     function resetGame() {
-      player = { x: 100, y: 300, w: 30, h: 30, vy: 0, grounded: false };
       platforms = [];
       asteroids = [];
       score = 0;
       gameRunning = true;
       gameOverScreen.style.display = "none";
+
       for (let i = 0; i < 10; i++) {
-        platforms.push(createPlatform(200 * i, 350 - (i % 2) * 40, 100, Math.random() < 0.2));
+        platforms.push(createPlatform(200 * i, 300 + (Math.random() * 60), 100, Math.random() < 0.2));
       }
+
+      const firstPlatform = platforms[0];
+      player = {
+        x: firstPlatform.x + 10,
+        y: firstPlatform.y - 30,
+        w: 30,
+        h: 30,
+        vy: 0,
+        grounded: false
+      };
+
       animate();
     }
 
@@ -142,12 +163,10 @@
       if (!gameRunning) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Movimiento del jugador
       player.vy += gravity;
       player.y += player.vy;
       player.grounded = false;
 
-      // Plataformas
       for (let p of platforms) {
         p.x -= 2;
         drawPlatform(p);
@@ -165,17 +184,15 @@
         }
       }
 
-      // Eliminar plataformas fuera de pantalla y añadir nuevas
       if (platforms[0].x + platforms[0].w < 0) {
         platforms.shift();
         let lastX = platforms[platforms.length - 1].x;
         platforms.push(
-          createPlatform(lastX + 200, 350 - (Math.random() * 80), 100, Math.random() < 0.2)
+          createPlatform(lastX + 200, 300 + (Math.random() * 60), 100, Math.random() < 0.2)
         );
       }
 
-      // Asteroides
-      if (Math.random() < 0.02) asteroids.push(createAsteroid());
+      if (Math.random() < 0.02 && score > 10) asteroids.push(createAsteroid());
       for (let i = asteroids.length - 1; i >= 0; i--) {
         let a = asteroids[i];
         a.y += a.speed;
@@ -214,6 +231,7 @@
       }
     });
 
+    music.play();
     resetGame();
   </script>
 </body>
