@@ -1,218 +1,220 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Stickman Runner</title>
+  <meta charset="UTF-8" />
+  <title>Stickman Run</title>
   <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       display: flex;
+      justify-content: center;
+      align-items: center;
       height: 100vh;
       background: linear-gradient(to bottom, #87ceeb, #ffffff);
     }
-    #left, #right {
-      width: 20%;
-      padding: 1em;
-      background-color: #f0f0f0;
-    }
-    #game-container {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
     canvas {
-      border: 3px solid #000;
-      background-color: #d0f0ff;
+      background: #d0f0ff;
+      border: 2px solid #333;
     }
-    button {
-      margin-top: 10px;
-      padding: 10px 15px;
-      font-size: 16px;
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #000;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 2;
+    }
+    #gameOverScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 28px;
+      z-index: 3;
+    }
+    #gameOverScreen button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    #musicToggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
     }
   </style>
 </head>
 <body>
-  <div id="left">
-    <h2>Controles</h2>
-    <ul>
-      <li><strong>← →</strong>: Mover</li>
-      <li><strong>Espacio</strong>: Saltar</li>
-    </ul>
-    <button id="toggleMusic">🔈 Música</button>
+  <div id="ui">Puntuación: <span id="score">0</span></div>
+  <button id="musicToggle">🎵 Música (On)</button>
+  <div id="gameOverScreen">
+    <div id="finalScore"></div>
+    <button onclick="location.reload()">Volver a empezar</button>
   </div>
-  <div id="game-container">
-    <canvas id="gameCanvas" width="600" height="400"></canvas>
-    <div id="gameOverScreen" style="display:none; text-align:center;">
-      <h2>Has perdido</h2>
-      <p id="finalScore"></p>
-      <button onclick="startGame()">Volver a jugar</button>
-    </div>
-  </div>
-  <div id="right">
-    <h2>Info</h2>
-    <p>Puntos: <span id="score">0</span></p>
-  </div>
-  
-  <audio id="bgMusic" loop>
-    <source src="https://www.bensound.com/bensound-music/bensound-epic.mp3" type="audio/mpeg">
+  <canvas id="game" width="800" height="400"></canvas>
+  <audio id="bgMusic" loop autoplay>
+    <source src="https://cdn.pixabay.com/audio/2022/10/31/audio_a6c2048e30.mp3" type="audio/mpeg" />
   </audio>
-  <audio id="deathSound">
-    <source src="https://www.soundjay.com/button/sounds/button-10.mp3" type="audio/mpeg">
+  <audio id="dieSound">
+    <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_664f82b217.mp3" type="audio/mpeg" />
   </audio>
-
   <script>
-    const canvas = document.getElementById("gameCanvas");
+    const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     const scoreDisplay = document.getElementById("score");
-    const bgMusic = document.getElementById("bgMusic");
-    const deathSound = document.getElementById("deathSound");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const finalScore = document.getElementById("finalScore");
+    const music = document.getElementById("bgMusic");
+    const dieSound = document.getElementById("dieSound");
+    const musicToggle = document.getElementById("musicToggle");
 
-    let player = { x: 50, y: 300, w: 20, h: 40, vy: 0, grounded: false };
+    let player = { x: 100, y: 300, w: 30, h: 30, vy: 0, grounded: false };
     let gravity = 0.8;
+    let jumpStrength = -12;
     let platforms = [];
-    let traps = [];
     let asteroids = [];
-    let keys = {};
     let score = 0;
-    let musicPlaying = true;
     let gameRunning = true;
 
-    document.addEventListener("keydown", e => keys[e.key] = true);
-    document.addEventListener("keyup", e => keys[e.key] = false);
+    function createPlatform(x, y, w, trap = false) {
+      return { x, y, w, h: 10, trap };
+    }
 
-    document.getElementById("toggleMusic").onclick = () => {
-      if (musicPlaying) {
-        bgMusic.pause();
-        musicPlaying = false;
-      } else {
-        bgMusic.play();
-        musicPlaying = true;
-      }
-    };
+    function createAsteroid() {
+      return {
+        x: Math.random() * canvas.width,
+        y: -20,
+        r: 10 + Math.random() * 10,
+        speed: 4 + Math.random() * 3
+      };
+    }
 
-    function startGame() {
-      document.getElementById("gameOverScreen").style.display = "none";
-      player = { x: 50, y: 300, w: 20, h: 40, vy: 0, grounded: false };
-      score = 0;
+    function resetGame() {
+      player = { x: 100, y: 300, w: 30, h: 30, vy: 0, grounded: false };
       platforms = [];
-      traps = [];
       asteroids = [];
+      score = 0;
       gameRunning = true;
-      bgMusic.play();
-      loop();
-    }
-
-    function spawnPlatform() {
-      const y = 300 + Math.random() * 100 - 50;
-      const w = 100 + Math.random() * 50;
-      const trap = Math.random() < 0.3; // 30% probabilidad de trampa
-      platforms.push({ x: canvas.width, y, w, h: 10, trap });
-    }
-
-    function spawnAsteroid() {
-      asteroids.push({ x: Math.random() * canvas.width, y: -20, r: 10 + Math.random() * 20, vy: 2 + Math.random() * 2 });
-    }
-
-    function loop() {
-      if (!gameRunning) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Movimiento jugador
-      if (keys["ArrowLeft"]) player.x -= 4;
-      if (keys["ArrowRight"]) player.x += 4;
-      if (keys[" "] && player.grounded) {
-        player.vy = -12;
-        player.grounded = false;
+      gameOverScreen.style.display = "none";
+      for (let i = 0; i < 10; i++) {
+        platforms.push(createPlatform(200 * i, 350 - (i % 2) * 40, 100, Math.random() < 0.2));
       }
-      player.vy += gravity;
-      player.y += player.vy;
+      animate();
+    }
 
-      // Dibujar jugador
+    function drawPlayer() {
       ctx.fillStyle = "black";
       ctx.fillRect(player.x, player.y, player.w, player.h);
+    }
 
-      // Dibujar plataformas y colisión
-      platforms.forEach((plat, i) => {
-        plat.x -= 2;
-        ctx.fillStyle = plat.trap ? "red" : "brown";
-        ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+    function drawPlatform(p) {
+      ctx.fillStyle = p.trap ? "red" : "green";
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+    }
 
-        // Trampas
-        if (
-          plat.trap &&
-          player.x < plat.x + plat.w &&
-          player.x + player.w > plat.x &&
-          player.y + player.h > plat.y &&
-          player.y < plat.y + plat.h
-        ) {
-          gameOver();
-        }
-
-        // Plataforma segura
-        if (!plat.trap &&
-          player.x + player.w > plat.x &&
-          player.x < plat.x + plat.w &&
-          player.y + player.h > plat.y &&
-          player.y + player.h < plat.y + plat.h + 10 &&
-          player.vy >= 0
-        ) {
-          player.y = plat.y - player.h;
-          player.vy = 0;
-          player.grounded = true;
-        }
-
-        // Eliminar plataformas fuera de pantalla
-        if (plat.x + plat.w < 0) {
-          platforms.splice(i, 1);
-          score++;
-        }
-      });
-
-      // Dibujar asteroides
-      asteroids.forEach((ast, i) => {
-        ast.y += ast.vy;
-        ctx.beginPath();
-        ctx.fillStyle = "gray";
-        ctx.arc(ast.x, ast.y, ast.r, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Colisión con jugador
-        if (
-          player.x < ast.x + ast.r &&
-          player.x + player.w > ast.x - ast.r &&
-          player.y < ast.y + ast.r &&
-          player.y + player.h > ast.y - ast.r
-        ) {
-          gameOver();
-        }
-
-        if (ast.y > canvas.height) asteroids.splice(i, 1);
-      });
-
-      scoreDisplay.textContent = score;
-
-      // Gravedad fuera del canvas
-      if (player.y > canvas.height) gameOver();
-
-      // Spawners
-      if (Math.random() < 0.02) spawnPlatform();
-      if (Math.random() < 0.01) spawnAsteroid();
-
-      requestAnimationFrame(loop);
+    function drawAsteroid(a) {
+      ctx.fillStyle = "gray";
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     function gameOver() {
-      deathSound.play();
+      dieSound.play();
+      music.pause();
       gameRunning = false;
-      bgMusic.pause();
-      document.getElementById("finalScore").textContent = `Puntos: ${score}`;
-      document.getElementById("gameOverScreen").style.display = "block";
+      finalScore.textContent = `¡Has perdido! Puntuación: ${score}`;
+      gameOverScreen.style.display = "flex";
     }
 
-    startGame();
+    function animate() {
+      if (!gameRunning) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Movimiento del jugador
+      player.vy += gravity;
+      player.y += player.vy;
+      player.grounded = false;
+
+      // Plataformas
+      for (let p of platforms) {
+        p.x -= 2;
+        drawPlatform(p);
+        if (
+          player.x + player.w > p.x &&
+          player.x < p.x + p.w &&
+          player.y + player.h >= p.y &&
+          player.y + player.h <= p.y + 10 &&
+          player.vy >= 0
+        ) {
+          player.y = p.y - player.h;
+          player.vy = 0;
+          player.grounded = true;
+          if (p.trap) gameOver();
+        }
+      }
+
+      // Eliminar plataformas fuera de pantalla y añadir nuevas
+      if (platforms[0].x + platforms[0].w < 0) {
+        platforms.shift();
+        let lastX = platforms[platforms.length - 1].x;
+        platforms.push(
+          createPlatform(lastX + 200, 350 - (Math.random() * 80), 100, Math.random() < 0.2)
+        );
+      }
+
+      // Asteroides
+      if (Math.random() < 0.02) asteroids.push(createAsteroid());
+      for (let i = asteroids.length - 1; i >= 0; i--) {
+        let a = asteroids[i];
+        a.y += a.speed;
+        drawAsteroid(a);
+        if (
+          a.x > player.x &&
+          a.x < player.x + player.w &&
+          a.y + a.r > player.y &&
+          a.y - a.r < player.y + player.h
+        ) {
+          gameOver();
+        }
+        if (a.y > canvas.height) asteroids.splice(i, 1);
+      }
+
+      drawPlayer();
+      score++;
+      scoreDisplay.textContent = score;
+
+      requestAnimationFrame(animate);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp" && player.grounded) {
+        player.vy = jumpStrength;
+      }
+    });
+
+    musicToggle.addEventListener("click", () => {
+      if (music.paused) {
+        music.play();
+        musicToggle.textContent = "🎵 Música (On)";
+      } else {
+        music.pause();
+        musicToggle.textContent = "🎵 Música (Off)";
+      }
+    });
+
+    resetGame();
   </script>
 </body>
 </html>
