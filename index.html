@@ -5,12 +5,33 @@
   <title>Stickman Run</title>
   <style>
     /* Estilos CSS (igual que antes, omitido para brevedad) */
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+    }
   </style>
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, push, set, onValue, query, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
+  <!-- Firebase clásica (compatible con GitHub Pages) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCKXBefji0QOyoQ4ak_FTrRzmsnaQHsJek",
       authDomain: "stickman-467da.firebaseapp.com",
@@ -21,33 +42,86 @@
       measurementId: "G-KVBVF2YNHS"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    window.db = db;
-    window.ref = ref;
-    window.push = push;
-    window.set = set;
-    window.onValue = onValue;
-    window.query = query;
-    window.orderByChild = orderByChild;
-    window.limitToLast = limitToLast;
+    function guardarPuntuacion(nombre, puntos) {
+      const ref = db.ref("puntuaciones");
+      const nueva = ref.push();
+      nueva.set({ nombre, puntos });
+    }
+
+    function leerPuntuaciones(callback) {
+      const ref = db.ref("puntuaciones").orderByChild("puntos").limitToLast(10);
+      ref.once("value", snapshot => {
+        const datos = snapshot.val();
+        callback(datos);
+      });
+    }
   </script>
 </head>
 <body>
-  <!-- Resto del HTML igual que antes -->
-  <script type="module">
-    const db = window.db;
-    const ref = window.ref;
-    const push = window.push;
-    const set = window.set;
-    const onValue = window.onValue;
-    const query = window.query;
-    const orderByChild = window.orderByChild;
-    const limitToLast = window.limitToLast;
+  <h1>Stickman Run</h1>
 
-    // El resto del script JS de juego aquí, usando db, ref, etc.
-    // Puedes mantener la lógica de puntuación y guardar como ya estaba, solo cambiando la parte que usaba firebase.database()
+  <!-- Formulario para introducir nombre y puntuación -->
+  <div>
+    <h2>Guardar puntuación</h2>
+    <input type="text" id="nombre" placeholder="Tu nombre" />
+    <input type="number" id="puntos" placeholder="Puntuación" />
+    <button onclick="guardarDesdeFormulario()">Guardar</button>
+  </div>
+
+  <!-- Contenedor del ranking -->
+  <div id="ranking">
+    <h2>Ranking Top 10</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Posición</th>
+          <th>Nombre</th>
+          <th>Puntos</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-ranking">
+        <!-- Las puntuaciones se cargarán aquí -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    function guardarDesdeFormulario() {
+      const nombre = document.getElementById("nombre").value;
+      const puntos = parseInt(document.getElementById("puntos").value);
+      if (nombre && !isNaN(puntos)) {
+        guardarPuntuacion(nombre, puntos);
+        alert("Puntuación guardada");
+        location.reload(); // Recargar para ver el ranking actualizado
+      } else {
+        alert("Introduce un nombre y una puntuación válida.");
+      }
+    }
+
+    // Mostrar el ranking al cargar la página
+    leerPuntuaciones(datos => {
+      const tabla = document.getElementById("tabla-ranking");
+      const lista = [];
+
+      for (const id in datos) {
+        lista.push(datos[id]);
+      }
+
+      lista.sort((a, b) => b.puntos - a.puntos);
+
+      lista.forEach((item, index) => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${item.nombre}</td>
+          <td>${item.puntos}</td>
+        `;
+        tabla.appendChild(fila);
+      });
+    });
   </script>
 </body>
 </html>
