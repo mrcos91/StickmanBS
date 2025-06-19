@@ -1,226 +1,662 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Stickman Run</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8" />
+    <title>Stickman Run Retro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    body {
-      background: #111;
-      color: white;
-      font-family: 'Arial', sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
-
-    canvas {
-      border: 4px solid #fff;
-      border-radius: 20px;
-      background: linear-gradient(to top, #333, #222);
-    }
-
-    .ui {
-      margin-top: 10px;
-      display: flex;
-      gap: 15px;
-      align-items: center;
-    }
-
-    .ui button {
-      background-color: #222;
-      color: white;
-      border: 2px solid white;
-      padding: 8px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .ui button:hover {
-      background-color: #444;
-    }
-
-    #score {
-      font-size: 20px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Stickman Run</h1>
-  <canvas id="gameCanvas" width="800" height="400"></canvas>
-
-  <div class="ui">
-    <span id="score">Puntuación: 0</span>
-    <button id="startGame">INICIAR JUEGO</button>
-    <button id="musicToggle">Música: On</button>
-  </div>
-
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    const startGameButton = document.getElementById("startGame");
-    const scoreDisplay = document.getElementById("score");
-    const musicToggle = document.getElementById("musicToggle");
-
-    const music = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_bf6bb93dc7.mp3?filename=8-bit-funk-105135.mp3");
-    music.loop = true;
-    let audioInitialized = false;
-
-    let stickman, platforms, gravity, jumpStrength, keys, score, isJumping, gameRunning;
-
-    function resetGame() {
-      stickman = {
-        x: 100,
-        y: 300,
-        width: 20,
-        height: 40,
-        vy: 0,
-        onGround: false
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCKXBefji0QOyoQ4ak_FTrRzmsnaQHsJek",
+        authDomain: "stickman-467da.firebaseapp.com",
+        projectId: "stickman-467da",
+        storageBucket: "stickman-467da.firebasestorage.app",
+        messagingSenderId: "419040359151",
+        appId: "1:419040359151:web:5364ede993f298b04d611a",
+        measurementId: "G-KVBVF2YNHS"
       };
 
-      gravity = 0.8;
-      jumpStrength = 15;
-      keys = {};
-      score = 0;
-      isJumping = false;
-      gameRunning = true;
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      window.db = getFirestore(app);
+      window.firebase = { collection, addDoc, query, orderBy, limit, getDocs };
+    </script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(to bottom, #4CAF50, #8BC34A);
+            overflow: hidden;
+            color: #eee;
+        }
+        header {
+            width: 100%;
+            padding: 15px;
+            background-color: #333;
+            color: #FFEB3B;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        canvas {
+            background: #A7D9A0;
+            border: 6px solid #222;
+            margin-top: 25px;
+            box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.5);
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            position: relative;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #FFEB3B;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 2;
+            text-shadow: 2px 2px #000;
+        }
+        .full-screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #FFEB3B;
+            font-size: 32px;
+            z-index: 3;
+            text-align: center;
+            text-shadow: 3px 3px #000;
+        }
+        .full-screen-overlay h1 {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: #FF4081;
+        }
+        .full-screen-overlay p {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            color: #B2FF59;
+        }
+        .full-screen-overlay button {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 24px;
+            cursor: pointer;
+            border: 4px solid #FF4081;
+            border-radius: 8px;
+            background-color: #00BCD4;
+            color: #FFF;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 5px 5px #000;
+        }
+        .full-screen-overlay button:hover {
+            background-color: #0097A7;
+            transform: translateY(-2px);
+            box-shadow: 7px 7px #000;
+        }
+        .full-screen-overlay button:active {
+            transform: translateY(2px);
+            box-shadow: 3px 3px #000;
+        }
+        #musicToggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 2;
+            padding: 10px 18px;
+            font-size: 18px;
+            cursor: pointer;
+            border: 3px solid #00E676;
+            border-radius: 5px;
+            background-color: #76FF03;
+            color: #333;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 3px 3px #000;
+            font-family: 'Press Start 2P', cursive;
+        }
+        #musicToggle:hover {
+            background-color: #64DD17;
+            transform: translateY(-1px);
+            box-shadow: 4px 4px #000;
+        }
+        #musicToggle:active {
+            transform: translateY(1px);
+            box-shadow: 2px 2px #000;
+        }
+        #leaderboard {
+            position: absolute;
+            top: 150px;
+            right: 20px;
+            width: 250px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 4px solid #FFEB3B;
+            border-radius: 8px;
+            padding: 15px;
+            color: #fff;
+            font-family: 'Press Start 2P', cursive;
+            box-shadow: 5px 5px #000;
+            text-shadow: 2px 2px #000;
+        }
+        #leaderboard h2 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            color: #FF4081;
+            text-align: center;
+        }
+        #leaderboard ol {
+            margin: 0;
+            padding-left: 30px;
+            list-style-type: decimal;
+        }
+        #leaderboard li {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #B2FF59;
+        }
+    </style>
+</head>
+<body>
+    <header>Stickman Run Retro</header>
+    <div id="ui">Puntuación: <span id="score">0</span></div>
+    <button id="musicToggle">🎵 Música (On)</button>
 
-      platforms = [];
-      for (let i = 0; i < 5; i++) {
-        platforms.push({
-          x: i * 200,
-          y: 350,
-          width: 150,
-          height: 10
+    <div id="startScreen" class="full-screen-overlay">
+        <h1>STICKMAN RUN</h1>
+        <p>¡Corre, salta y muévete para sobrevivir!<br>Usa las flechas para jugar.</p>
+        <button id="startGameButton">INICIAR JUEGO</button>
+    </div>
+
+    <div id="gameOverScreen" class="full-screen-overlay" style="display: none;">
+        <div id="finalScore"></div>
+        <button id="restartGameButton">VOLVER A EMPEZAR</button>
+    </div>
+
+    <canvas id="game" width="800" height="400"></canvas>
+    
+    <div id="leaderboard">
+        <h2>RANKING TOP 10</h2>
+        <ol id="ranking-list">
+            <li>Cargando...</li>
+        </ol>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="https://cdn.pixabay.com/download/audio/2024/08/28/audio_f7b02c8be7.mp3?filename=retro-game-arcade-236133.mp3" type="audio/mpeg" />
+    </audio>
+    <audio id="dieSound">
+        <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_3f6286949a.mp3?filename=grunt2-85989.mp3" type="audio/mpeg" />
+    </audio>
+
+    <script type="module">
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const scoreDisplay = document.getElementById("score");
+        const startScreen = document.getElementById("startScreen");
+        const startGameButton = document.getElementById("startGameButton");
+        const gameOverScreen = document.getElementById("gameOverScreen");
+        const finalScore = document.getElementById("finalScore");
+        const restartGameButton = document.getElementById("restartGameButton");
+        const music = document.getElementById("bgMusic");
+        const dieSound = document.getElementById("dieSound");
+        const musicToggle = document.getElementById("musicToggle");
+        const rankingList = document.getElementById("ranking-list");
+
+        const db = window.db;
+        const { collection, addDoc, query, orderBy, limit, getDocs } = window.firebase;
+
+        let player;
+        let gravity = 0.8;
+        let jumpStrength = -12.5; 
+        let platforms = [];
+        let asteroids = [];
+        let coins = [];
+        let score = 0;
+        let gameRunning = false;
+        let animationFrameId;
+
+        let gameSpeed = 3;
+        const maxGameSpeed = 7;
+        
+        let keys = {
+            ArrowUp: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            ' ': false
+        };
+
+        let frameCounter = 0;
+        let audioInitialized = false;
+
+        async function saveScore(name, score) {
+            try {
+                await addDoc(collection(db, "scores"), {
+                    name: name,
+                    score: score,
+                    createdAt: new Date()
+                });
+                console.log("Puntuación guardada");
+                fetchRanking();
+            } catch (e) {
+                console.error("Error al añadir documento: ", e);
+            }
+        }
+
+        async function fetchRanking() {
+            const scoresCol = collection(db, "scores");
+            const q = query(scoresCol, orderBy("score", "desc"), limit(10));
+            const querySnapshot = await getDocs(q);
+            
+            rankingList.innerHTML = "";
+            if (querySnapshot.empty) {
+                rankingList.innerHTML = "<li>¡Sé el primero!</li>";
+                return;
+            }
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const listItem = document.createElement("li");
+                listItem.textContent = `${data.name}: ${data.score}`;
+                rankingList.appendChild(listItem);
+            });
+        }
+
+        function createPlatform(x, y, w) {
+            const width = w || 100 + Math.random() * 100;
+            return { x, y, w: width, h: 10 };
+        }
+        
+        function createCoin(x, y) {
+            return { x, y, r: 8, collected: false };
+        }
+
+        function createAsteroid() {
+            const r = 15 + Math.random() * 15;
+            let points = [];
+            let angleStep = (Math.PI * 2) / 8;
+            for (let i = 0; i < 8; i++) {
+                let length = r * (0.75 + Math.random() * 0.25);
+                points.push({
+                    x: Math.cos(angleStep * i) * length,
+                    y: Math.sin(angleStep * i) * length
+                });
+            }
+            return {
+                x: Math.random() * canvas.width,
+                y: -r * 2,
+                r: r,
+                speed: 3 + Math.random() * 3,
+                points: points,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.05
+            };
+        }
+
+        function resetGame() {
+            platforms = [];
+            asteroids = [];
+            coins = [];
+            score = 0;
+            gameSpeed = 3;
+            gameRunning = true;
+            gameOverScreen.style.display = "none";
+            startScreen.style.display = "none";
+            scoreDisplay.textContent = score;
+
+            platforms.push(createPlatform(50, 300, 200));
+
+            while (platforms[platforms.length - 1].x + platforms[platforms.length - 1].w < canvas.width) {
+                 addPlatform();
+            }
+
+            const firstPlatform = platforms[0];
+            player = {
+                x: firstPlatform.x + 40, y: firstPlatform.y - 50,
+                w: 25, h: 50,
+                vx: 0,
+                vy: 0,
+                speed: 4,
+                grounded: false,
+                jumps: 0,
+                maxJumps: 2
+            };
+
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            
+            // La lógica existente ya se encarga de reproducir la música si el botón dice "On"
+            if (musicToggle.textContent.includes("On")) {
+                music.currentTime = 0;
+                music.play();
+            }
+            
+            animate();
+        }
+
+        function addPlatform() {
+            const lastPlatform = platforms[platforms.length - 1];
+            const minDistance = 80;
+            const maxDistance = 160;
+            let newX = lastPlatform.x + lastPlatform.w + minDistance + Math.random() * (maxDistance - minDistance);
+            const minHeightDiff = -50;
+            const maxHeightDiff = 50;
+            let newY = lastPlatform.y + minHeightDiff + Math.random() * (maxHeightDiff - minHeightDiff);
+            newY = Math.max(220, Math.min(canvas.height - 50, newY));
+            const newPlatform = createPlatform(newX, newY);
+            platforms.push(newPlatform);
+
+            if (Math.random() < 0.5) {
+                coins.push(createCoin(newPlatform.x + newPlatform.w / 2, newPlatform.y - 30));
+            }
+        }
+        
+        function drawStickMan() {
+            const headRadius = player.h / 5;
+            const bodyLength = player.h / 2;
+            const limbLength = player.h / 2.5;
+
+            const centerX = player.x + player.w / 2;
+            const topOfHead = player.y;
+            const neckY = topOfHead + headRadius;
+            const shoulderY = neckY + 5;
+            const waistY = shoulderY + bodyLength;
+
+            ctx.strokeStyle = "#1A1A1A";
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+
+            ctx.beginPath();
+            ctx.arc(centerX, topOfHead, headRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, neckY);
+            ctx.lineTo(centerX, waistY);
+            ctx.stroke();
+
+            const angle = player.grounded ? Math.sin(frameCounter * 0.2) * 0.8 : 0.5;
+
+            ctx.beginPath();
+            if (player.grounded) {
+                ctx.moveTo(centerX, shoulderY);
+                ctx.lineTo(centerX + Math.cos(angle) * limbLength, shoulderY + Math.sin(angle) * limbLength);
+                ctx.moveTo(centerX, shoulderY);
+                ctx.lineTo(centerX + Math.cos(-angle) * limbLength, shoulderY + Math.sin(-angle) * limbLength);
+            } else {
+                 ctx.moveTo(centerX, shoulderY);
+                 ctx.lineTo(centerX - limbLength * 0.6, shoulderY - limbLength * 0.4);
+                 ctx.moveTo(centerX, shoulderY);
+                 ctx.lineTo(centerX + limbLength * 0.6, shoulderY - limbLength * 0.4);
+            }
+            ctx.stroke();
+
+            ctx.beginPath();
+            if (player.grounded) {
+                ctx.moveTo(centerX, waistY);
+                ctx.lineTo(centerX + Math.sin(-angle) * limbLength, waistY + Math.cos(-angle) * limbLength * 0.8);
+                ctx.moveTo(centerX, waistY);
+                ctx.lineTo(centerX + Math.sin(angle) * limbLength, waistY + Math.cos(angle) * limbLength * 0.8);
+            } else {
+                 ctx.moveTo(centerX, waistY);
+                 ctx.lineTo(centerX - limbLength * 0.3, waistY + limbLength);
+                 ctx.moveTo(centerX, waistY);
+                 ctx.lineTo(centerX + limbLength * 0.3, waistY + limbLength);
+            }
+            ctx.stroke();
+        }
+
+        function drawPlatform(p) {
+            ctx.fillStyle = "#8BC34A";
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(p.x, p.y, p.w, p.h);
+        }
+
+        function drawAsteroid(a) {
+            a.rotation += a.rotationSpeed;
+            ctx.save();
+            ctx.translate(a.x, a.y);
+            ctx.rotate(a.rotation);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, a.r * 3);
+            gradient.addColorStop(0, 'rgba(255, 165, 0, 0.8)');
+            gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.moveTo(-a.r / 2, 0);
+            ctx.lineTo(a.r / 2, 0);
+            ctx.lineTo(0, a.r * 3);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = "#607D8B";
+            ctx.strokeStyle = "#37474F";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(a.points[0].x, a.points[0].y);
+            for (let i = 1; i < a.points.length; i++) {
+                ctx.lineTo(a.points[i].x, a.points[i].y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.beginPath();
+            ctx.arc(a.r * 0.2, -a.r * 0.3, a.r * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(-a.r * 0.4, a.r * 0.1, a.r * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawCoin(c) {
+            ctx.fillStyle = "#FFD700";
+            ctx.strokeStyle = "#DAA520";
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = "#FFFF00";
+            ctx.beginPath();
+            ctx.arc(c.x - c.r*0.3, c.y - c.r*0.3, c.r*0.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        async function gameOver() {
+            if (!gameRunning) return;
+            
+            gameRunning = false;
+            music.pause();
+            dieSound.play();
+            cancelAnimationFrame(animationFrameId);
+
+            const playerName = prompt(`¡HAS PERDIDO!\nPUNTUACIÓN: ${score}\n\nIngresa tu nombre para el ranking (3-10 caracteres):`);
+            
+            if (playerName && playerName.trim().length >= 3 && playerName.trim().length <= 10) {
+                finalScore.textContent = "Guardando puntuación...";
+                gameOverScreen.style.display = "flex";
+                await saveScore(playerName.trim(), score);
+            }
+            
+            finalScore.innerHTML = `¡JUEGO TERMINADO!<br>PUNTUACIÓN FINAL: ${score}`;
+            gameOverScreen.style.display = "flex";
+        }
+
+        function animate() {
+            if (!gameRunning) return;
+            
+            animationFrameId = requestAnimationFrame(animate);
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            frameCounter++;
+
+            gameSpeed = Math.min(maxGameSpeed, 3 + score / 1500);
+
+            player.vx = 0;
+            if (keys.ArrowLeft) player.vx = -player.speed;
+            if (keys.ArrowRight) player.vx = player.speed;
+            player.x += player.vx;
+
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+            
+            if ((keys.ArrowUp || keys[' ']) && player.jumps < player.maxJumps) {
+                 player.vy = jumpStrength;
+                 player.jumps++;
+                 keys.ArrowUp = false;
+                 keys[' '] = false;
+            }
+
+            player.vy += gravity;
+            player.y += player.vy;
+            player.grounded = false;
+
+            for (let i = platforms.length - 1; i >= 0; i--) {
+                let p = platforms[i];
+                p.x -= gameSpeed;
+                drawPlatform(p);
+
+                if (player.x + player.w > p.x && player.x < p.x + p.w && player.y + player.h > p.y && player.y + player.h - player.vy <= p.y + 1 && player.vy >= 0) {
+                    player.y = p.y - player.h;
+                    player.vy = 0;
+                    if (!player.grounded) {
+                        player.jumps = 0;
+                    }
+                    player.grounded = true;
+                }
+
+                if (p.x + p.w < 0) platforms.splice(i, 1);
+            }
+            
+            for (let i = coins.length - 1; i >= 0; i--) {
+                let c = coins[i];
+                c.x -= gameSpeed;
+                drawCoin(c);
+
+                const dx = (player.x + player.w / 2) - c.x;
+                const dy = (player.y + player.h / 2) - c.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < c.r + player.w / 2) {
+                    score += 50;
+                    coins.splice(i, 1);
+                }
+
+                if (c.x + c.r < 0) coins.splice(i, 1);
+            }
+
+            if (platforms.length > 0) {
+                const lastPlatform = platforms[platforms.length - 1];
+                if (lastPlatform.x + lastPlatform.w < canvas.width + 150) {
+                    addPlatform();
+                }
+            }
+
+            if (player.y > canvas.height + 100) {
+                gameOver();
+                return;
+            }
+            
+            if (Math.random() < 0.015 && score > 50) {
+                asteroids.push(createAsteroid());
+            }
+
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                let a = asteroids[i];
+                a.y += a.speed;
+                a.x -= gameSpeed * 0.5;
+                drawAsteroid(a);
+
+                const dx = a.x - (player.x + player.w / 2);
+                const dy = a.y - (player.y + player.h / 2);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < a.r + Math.max(player.w, player.h) / 2 - 10) {
+                    gameOver();
+                    return;
+                }
+                if (a.y > canvas.height + a.r * 2 || a.x + a.r < 0) asteroids.splice(i, 1);
+            }
+
+            drawStickMan();
+            score += 1;
+            scoreDisplay.textContent = score;
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (gameRunning && keys.hasOwnProperty(e.key)) {
+                e.preventDefault();
+                keys[e.key] = true;
+            }
         });
-      }
 
-      requestAnimationFrame(updateGame);
-    }
-
-    function drawStickman() {
-      ctx.fillStyle = "#00ffff";
-      ctx.fillRect(stickman.x, stickman.y, stickman.width, stickman.height);
-    }
-
-    function drawPlatforms() {
-      ctx.fillStyle = "#fff";
-      platforms.forEach(p => {
-        ctx.fillRect(p.x, p.y, p.width, p.height);
-      });
-    }
-
-    function updateGame() {
-      if (!gameRunning) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Movimiento
-      if (keys[" "]) {
-        if (stickman.onGround && !isJumping) {
-          stickman.vy = -jumpStrength;
-          stickman.onGround = false;
-          isJumping = true;
-        }
-      } else {
-        isJumping = false;
-      }
-
-      stickman.vy += gravity;
-      stickman.y += stickman.vy;
-
-      stickman.onGround = false;
-      platforms.forEach(p => {
-        if (
-          stickman.x < p.x + p.width &&
-          stickman.x + stickman.width > p.x &&
-          stickman.y + stickman.height >= p.y &&
-          stickman.y + stickman.height <= p.y + p.height &&
-          stickman.vy >= 0
-        ) {
-          stickman.y = p.y - stickman.height;
-          stickman.vy = 0;
-          stickman.onGround = true;
-        }
-      });
-
-      // Mover plataformas hacia la izquierda
-      platforms.forEach(p => {
-        p.x -= 4;
-      });
-
-      // Añadir nuevas plataformas
-      if (platforms[platforms.length - 1].x + platforms[platforms.length - 1].width < canvas.width) {
-        let lastY = platforms[platforms.length - 1].y;
-        let newY = lastY + (Math.random() * 60 - 30);
-        newY = Math.min(350, Math.max(200, newY));
-        platforms.push({
-          x: canvas.width + Math.random() * 100,
-          y: newY,
-          width: 150,
-          height: 10
+        document.addEventListener("keyup", (e) => {
+            if (gameRunning && keys.hasOwnProperty(e.key)) {
+                e.preventDefault();
+                keys[e.key] = false;
+            }
         });
-      }
 
-      // Eliminar plataformas fuera de pantalla
-      if (platforms[0].x + platforms[0].width < 0) {
-        platforms.shift();
-        score++;
-        scoreDisplay.textContent = "Puntuación: " + score;
-      }
+        musicToggle.addEventListener("click", () => {
+            if (!audioInitialized) return;
+            if (music.paused) {
+                music.play();
+                musicToggle.textContent = "🎵 Música (On)";
+            } else {
+                music.pause();
+                musicToggle.textContent = "🎵 Música (Off)";
+            }
+        });
 
-      // Dibujar
-      drawPlatforms();
-      drawStickman();
+        function initializeAudio() {
+            if (audioInitialized) return;
+            music.play().then(() => {
+                music.pause();
+                music.currentTime = 0;
+            }).catch(e => console.error("Error al inicializar música:", e));
 
-      // Fin del juego si cae al vacío
-      if (stickman.y > canvas.height) {
-        gameRunning = false;
-        scoreDisplay.textContent += " — ¡Game Over!";
-      } else {
-        requestAnimationFrame(updateGame);
-      }
-    }
+            dieSound.play().then(() => {
+                dieSound.pause();
+                dieSound.currentTime = 0;
+            }).catch(e => console.error("Error al inicializar sonido:", e));
 
-    document.addEventListener("keydown", e => {
-      keys[e.key] = true;
-    });
-
-    document.addEventListener("keyup", e => {
-      keys[e.key] = false;
-    });
-
-    startGameButton.addEventListener("click", () => {
-      if (!audioInitialized) {
-        music.volume = 0.5;
-        if (musicToggle.textContent.includes("On")) {
-          music.play().catch(e => {
-            console.warn("No se pudo reproducir la música automáticamente:", e);
-          });
+            audioInitialized = true;
+            console.log("Audio inicializado.");
         }
-        audioInitialized = true;
-      }
-      resetGame();
-    });
 
-    musicToggle.addEventListener("click", () => {
-      if (music.paused) {
-        music.play();
-        musicToggle.textContent = "Música: On";
-      } else {
-        music.pause();
-        musicToggle.textContent = "Música: Off";
-      }
-    });
-  </script>
+        startGameButton.addEventListener("click", () => {
+            initializeAudio();
+            resetGame();
+        });
+        
+        restartGameButton.addEventListener("click", () => {
+            resetGame();
+        });
+        
+        fetchRanking();
+    </script>
 </body>
 </html>
