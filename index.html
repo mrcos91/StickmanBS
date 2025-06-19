@@ -1,207 +1,218 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Stickman Plataforma</title>
+  <meta charset="UTF-8">
+  <title>Stickman Runner</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
-    canvas { display: block; margin: 0 auto; background: #111; }
-    #gameOverScreen {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-      color: white;
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      background: linear-gradient(to bottom, #87ceeb, #ffffff);
+    }
+    #left, #right {
+      width: 20%;
+      padding: 1em;
+      background-color: #f0f0f0;
+    }
+    #game-container {
+      flex-grow: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
-      display: none;
     }
-    #restartBtn {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 18px;
-      background-color: #222;
-      border: 2px solid white;
-      color: white;
-      cursor: pointer;
+    canvas {
+      border: 3px solid #000;
+      background-color: #d0f0ff;
     }
-    #restartBtn:hover {
-      background-color: white;
-      color: black;
+    button {
+      margin-top: 10px;
+      padding: 10px 15px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="800" height="400"></canvas>
+  <div id="left">
+    <h2>Controles</h2>
+    <ul>
+      <li><strong>← →</strong>: Mover</li>
+      <li><strong>Espacio</strong>: Saltar</li>
+    </ul>
+    <button id="toggleMusic">🔈 Música</button>
+  </div>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <div id="gameOverScreen" style="display:none; text-align:center;">
+      <h2>Has perdido</h2>
+      <p id="finalScore"></p>
+      <button onclick="startGame()">Volver a jugar</button>
+    </div>
+  </div>
+  <div id="right">
+    <h2>Info</h2>
+    <p>Puntos: <span id="score">0</span></p>
+  </div>
+  
+  <audio id="bgMusic" loop>
+    <source src="https://www.bensound.com/bensound-music/bensound-epic.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="deathSound">
+    <source src="https://www.soundjay.com/button/sounds/button-10.mp3" type="audio/mpeg">
+  </audio>
 
-<div id="gameOverScreen">
-  <div id="finalScore">Has perdido</div>
-  <button id="restartBtn">Volver a empezar</button>
-</div>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreDisplay = document.getElementById("score");
+    const bgMusic = document.getElementById("bgMusic");
+    const deathSound = document.getElementById("deathSound");
 
-<!-- Sonidos -->
-<audio id="jumpSound" src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg" preload="auto"></audio>
-<audio id="fallSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
-<audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_9650a4183e.mp3?filename=8bit-loop-6566.mp3" preload="auto" loop></audio>
+    let player = { x: 50, y: 300, w: 20, h: 40, vy: 0, grounded: false };
+    let gravity = 0.8;
+    let platforms = [];
+    let traps = [];
+    let asteroids = [];
+    let keys = {};
+    let score = 0;
+    let musicPlaying = true;
+    let gameRunning = true;
 
-<script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+    document.addEventListener("keydown", e => keys[e.key] = true);
+    document.addEventListener("keyup", e => keys[e.key] = false);
 
-const jumpSound = document.getElementById("jumpSound");
-const fallSound = document.getElementById("fallSound");
-const bgMusic = document.getElementById("bgMusic");
-bgMusic.volume = 0.3;
-bgMusic.play();
+    document.getElementById("toggleMusic").onclick = () => {
+      if (musicPlaying) {
+        bgMusic.pause();
+        musicPlaying = false;
+      } else {
+        bgMusic.play();
+        musicPlaying = true;
+      }
+    };
 
-const gameOverScreen = document.getElementById("gameOverScreen");
-const finalScoreText = document.getElementById("finalScore");
-const restartBtn = document.getElementById("restartBtn");
-
-let player, platforms, score, scrollOffset, highScore, keys, gameOver;
-
-function initGame() {
-  player = {
-    x: 50, y: 300, width: 10, height: 30,
-    dx: 0, dy: 0,
-    jumping: 0,
-  };
-
-  gravity = 0.5;
-  scrollOffset = 0;
-  score = 0;
-  keys = {};
-  gameOver = false;
-  highScore = localStorage.getItem("highScore") || 0;
-
-  platforms = [
-    { x: 0, y: 350, width: 800, height: 50 }
-  ];
-
-  // Añadir plataformas iniciales
-  for (let i = 1; i <= 5; i++) {
-    platforms.push(genPlatform(800 + i * 200));
-  }
-}
-
-function genPlatform(x) {
-  return {
-    x: x,
-    y: 280 + Math.random() * 100 - 50,
-    width: 100,
-    height: 20
-  };
-}
-
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
-
-restartBtn.addEventListener("click", () => {
-  gameOverScreen.style.display = "none";
-  initGame();
-  loop();
-});
-
-function update() {
-  if (gameOver) return;
-
-  if (keys["ArrowRight"] || keys["d"]) player.dx = 3;
-  else if (keys["ArrowLeft"] || keys["a"]) player.dx = -3;
-  else player.dx = 0;
-
-  if ((keys["ArrowUp"] || keys["w"] || keys[" "]) && player.jumping < 2 && !keys["_jumping"]) {
-    player.dy = -10;
-    player.jumping++;
-    keys["_jumping"] = true;
-    jumpSound.currentTime = 0;
-    jumpSound.play();
-  }
-  if (!(keys["ArrowUp"] || keys["w"] || keys[" "])) {
-    keys["_jumping"] = false;
-  }
-
-  player.dy += gravity;
-  player.x += player.dx;
-  player.y += player.dy;
-
-  // Colisiones
-  platforms.forEach(p => {
-    if (
-      player.x < p.x + p.width &&
-      player.x + player.width > p.x &&
-      player.y + player.height < p.y + 10 &&
-      player.y + player.height + player.dy >= p.y
-    ) {
-      player.dy = 0;
-      player.y = p.y - player.height;
-      player.jumping = 0;
-    }
-  });
-
-  // Scroll
-  if (player.x > 400) {
-    scrollOffset += player.dx;
-    platforms.forEach(p => p.x -= player.dx);
-    player.x = 400;
-    score = Math.floor(scrollOffset / 10);
-    if (score > highScore) {
-      highScore = score;
-      localStorage.setItem("highScore", highScore);
+    function startGame() {
+      document.getElementById("gameOverScreen").style.display = "none";
+      player = { x: 50, y: 300, w: 20, h: 40, vy: 0, grounded: false };
+      score = 0;
+      platforms = [];
+      traps = [];
+      asteroids = [];
+      gameRunning = true;
+      bgMusic.play();
+      loop();
     }
 
-    // Generar nuevas plataformas dinámicamente
-    const lastPlatform = platforms[platforms.length - 1];
-    if (lastPlatform.x < canvas.width) {
-      platforms.push(genPlatform(lastPlatform.x + 200));
+    function spawnPlatform() {
+      const y = 300 + Math.random() * 100 - 50;
+      const w = 100 + Math.random() * 50;
+      const trap = Math.random() < 0.3; // 30% probabilidad de trampa
+      platforms.push({ x: canvas.width, y, w, h: 10, trap });
     }
-  }
 
-  // Caída
-  if (player.y > canvas.height) {
-    gameOver = true;
-    fallSound.play();
-    finalScoreText.innerHTML = `Game Over<br>Puntuación: ${score}<br>Récord: ${highScore}`;
-    gameOverScreen.style.display = "flex";
-  }
-}
+    function spawnAsteroid() {
+      asteroids.push({ x: Math.random() * canvas.width, y: -20, r: 10 + Math.random() * 20, vy: 2 + Math.random() * 2 });
+    }
 
-function drawStickman(x, y) {
-  ctx.strokeStyle = "white";
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(x + 5, y + 5, 5, 0, Math.PI * 2); ctx.stroke(); // Cabeza
-  ctx.beginPath(); ctx.moveTo(x + 5, y + 10); ctx.lineTo(x + 5, y + 25); ctx.stroke(); // Cuerpo
-  ctx.beginPath(); ctx.moveTo(x + 5, y + 15); ctx.lineTo(x - 5, y + 20); ctx.moveTo(x + 5, y + 15); ctx.lineTo(x + 15, y + 20); ctx.stroke(); // Brazos
-  ctx.beginPath(); ctx.moveTo(x + 5, y + 25); ctx.lineTo(x - 2, y + 35); ctx.moveTo(x + 5, y + 25); ctx.lineTo(x + 12, y + 35); ctx.stroke(); // Piernas
-}
+    function loop() {
+      if (!gameRunning) return;
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Movimiento jugador
+      if (keys["ArrowLeft"]) player.x -= 4;
+      if (keys["ArrowRight"]) player.x += 4;
+      if (keys[" "] && player.grounded) {
+        player.vy = -12;
+        player.grounded = false;
+      }
+      player.vy += gravity;
+      player.y += player.vy;
 
-  // Plataformas
-  ctx.fillStyle = "#444";
-  platforms.forEach(p => ctx.fillRect(p.x, p.y, p.width, p.height));
+      // Dibujar jugador
+      ctx.fillStyle = "black";
+      ctx.fillRect(player.x, player.y, player.w, player.h);
 
-  // Stickman
-  drawStickman(player.x, player.y);
+      // Dibujar plataformas y colisión
+      platforms.forEach((plat, i) => {
+        plat.x -= 2;
+        ctx.fillStyle = plat.trap ? "red" : "brown";
+        ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
 
-  // Puntuación
-  ctx.fillStyle = "white";
-  ctx.font = "18px monospace";
-  ctx.fillText("Puntuación: " + score, 10, 25);
-  ctx.fillText("Récord: " + highScore, 10, 50);
-}
+        // Trampas
+        if (
+          plat.trap &&
+          player.x < plat.x + plat.w &&
+          player.x + player.w > plat.x &&
+          player.y + player.h > plat.y &&
+          player.y < plat.y + plat.h
+        ) {
+          gameOver();
+        }
 
-function loop() {
-  update();
-  draw();
-  if (!gameOver) requestAnimationFrame(loop);
-}
+        // Plataforma segura
+        if (!plat.trap &&
+          player.x + player.w > plat.x &&
+          player.x < plat.x + plat.w &&
+          player.y + player.h > plat.y &&
+          player.y + player.h < plat.y + plat.h + 10 &&
+          player.vy >= 0
+        ) {
+          player.y = plat.y - player.h;
+          player.vy = 0;
+          player.grounded = true;
+        }
 
-initGame();
-loop();
-</script>
+        // Eliminar plataformas fuera de pantalla
+        if (plat.x + plat.w < 0) {
+          platforms.splice(i, 1);
+          score++;
+        }
+      });
+
+      // Dibujar asteroides
+      asteroids.forEach((ast, i) => {
+        ast.y += ast.vy;
+        ctx.beginPath();
+        ctx.fillStyle = "gray";
+        ctx.arc(ast.x, ast.y, ast.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Colisión con jugador
+        if (
+          player.x < ast.x + ast.r &&
+          player.x + player.w > ast.x - ast.r &&
+          player.y < ast.y + ast.r &&
+          player.y + player.h > ast.y - ast.r
+        ) {
+          gameOver();
+        }
+
+        if (ast.y > canvas.height) asteroids.splice(i, 1);
+      });
+
+      scoreDisplay.textContent = score;
+
+      // Gravedad fuera del canvas
+      if (player.y > canvas.height) gameOver();
+
+      // Spawners
+      if (Math.random() < 0.02) spawnPlatform();
+      if (Math.random() < 0.01) spawnAsteroid();
+
+      requestAnimationFrame(loop);
+    }
+
+    function gameOver() {
+      deathSound.play();
+      gameRunning = false;
+      bgMusic.pause();
+      document.getElementById("finalScore").textContent = `Puntos: ${score}`;
+      document.getElementById("gameOverScreen").style.display = "block";
+    }
+
+    startGame();
+  </script>
 </body>
 </html>
