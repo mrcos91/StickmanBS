@@ -200,7 +200,7 @@
         let isJumping = false;
 
         function createPlatform(x, y, w) {
-            return { x, y, w, h: 10, trap: false }; // Todas las plataformas son seguras
+            return { x, y, w, h: 10, trap: false };
         }
 
         function createAsteroid() {
@@ -226,9 +226,9 @@
             // Crear plataforma inicial fija
             platforms.push(createPlatform(50, 300, 100));
 
-            // Generar el resto de plataformas después de la primera
-            // Aseguramos que 'platforms' ya tenga al menos un elemento antes de llamar a addPlatform
-            for (let i = 0; i < 9; i++) { // Se generan 9 plataformas adicionales para un total de 10
+            // Generar un número inicial de plataformas para llenar la pantalla al principio
+            // Aseguramos que haya suficientes plataformas visibles para el jugador
+            for (let i = 0; i < 5; i++) { // Se generan 5 plataformas iniciales adicionales
                 addPlatform();
             }
 
@@ -256,7 +256,7 @@
         }
 
         function addPlatform() {
-            const lastPlatform = platforms[platforms.length - 1]; // Ahora esto siempre será válido
+            const lastPlatform = platforms[platforms.length - 1];
             const minDistance = 80;
             const maxDistance = 150;
             let newX = lastPlatform.x + lastPlatform.w + minDistance + Math.random() * (maxDistance - minDistance);
@@ -290,7 +290,7 @@
 
             // Body
             ctx.beginPath();
-            ctx.moveTo(bodyStartX, player.y + headRadius * 2);
+            ctx.moveTo(bodyStartX, bodyStartY);
             ctx.lineTo(bodyStartX, bodyStartY + bodyLength);
             ctx.stroke();
 
@@ -400,10 +400,13 @@
                 lastSpeedIncreaseScore = score;
             }
 
-            for (let p of platforms) {
+            // Mover y dibujar plataformas
+            for (let i = platforms.length - 1; i >= 0; i--) { // Iterar hacia atrás para la eliminación segura
+                let p = platforms[i];
                 p.x -= gameSpeed;
                 drawPlatform(p);
 
+                // Lógica de colisión
                 if (
                     player.x < p.x + p.w &&
                     player.x + player.w > p.x &&
@@ -416,12 +419,22 @@
                     player.grounded = true;
                     player.jumps = 0;
                 }
+
+                // Eliminar plataformas fuera de pantalla
+                if (p.x + p.w < 0) {
+                    platforms.splice(i, 1); // Eliminar la plataforma
+                }
             }
 
-            if (platforms[0].x + platforms[0].w < 0) {
-                platforms.shift();
+            // Añadir nuevas plataformas si el número es bajo
+            // Asegurarse de que siempre haya un buffer de plataformas por delante
+            // Añade una nueva plataforma cuando la última esté a punto de salir de la pantalla
+            if (platforms.length < 5 && platforms[platforms.length - 1].x < canvas.width - 100) { // Añade si hay menos de 5 y la última está visible
                 addPlatform();
+            } else if (platforms.length === 0) { // En caso de que se queden sin plataformas por alguna razón extrema
+                 addPlatform();
             }
+
 
             if (player.y + player.h > canvas.height + 50) {
                 gameOver();
